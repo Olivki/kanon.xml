@@ -11,7 +11,7 @@ apply plugin: "org.jetbrains.dokka"
 apply plugin: "maven-publish"
 
 group "moe.kanon.xml"
-description "A type-safe DSL builder for XML documents for Kotlin."
+description "Kotlin DSL builder for XML that supports a variety of \"accents\"."
 version "0.1.0"
 
 ext {
@@ -27,7 +27,7 @@ repositories {
 }
 
 dependencies {
-    implementation "moe.kanon.kextensions:kanon.kextensions:0.4.0"
+    implementation "moe.kanon.kextensions:kanon.kextensions:0.4.1"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
@@ -39,10 +39,12 @@ test {
 }
 
 compileKotlin {
+    kotlinOptions.freeCompilerArgs += ["-Xuse-experimental=kotlin.Experimental"]
     kotlinOptions.jvmTarget = "$javaTarget"
 }
 
 compileTestKotlin {
+    kotlinOptions.freeCompilerArgs += ["-Xuse-experimental=kotlin.Experimental"]
     kotlinOptions.jvmTarget = "$javaTarget"
 }
 
