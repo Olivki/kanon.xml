@@ -15,10 +15,15 @@
  */
 
 @file:Suppress("MemberVisibilityCanBePrivate")
+@file:JvmName("KanonXml")
 
 package moe.kanon.xml
 
-import moe.kanon.kextensions.dom.*
+import moe.kanon.kextensions.ExperimentalFeature
+import moe.kanon.kextensions.dom.appendElement
+import moe.kanon.kextensions.dom.appendTextContainer
+import moe.kanon.kextensions.dom.appendTextNode
+import moe.kanon.kextensions.dom.attributeMap
 import moe.kanon.kextensions.io.div
 import moe.kanon.kextensions.io.not
 import org.w3c.dom.Document
@@ -33,13 +38,12 @@ import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 
 // TODO: Add comments
-// TODO: Add the "Comment" entity thing.
+// TODO: Add more entities
 
 /**
- * The [DslMarker] for kXML.
+ * The [DslMarker] for kanon.xml.
  */
-@DslMarker
-public annotation class XmlDsl
+@DslMarker public annotation class XmlMarker
 
 public sealed class XmlEntity
 
@@ -61,30 +65,31 @@ public class XmlDocument(rootName: String?) : XmlEntity() {
     /**
      * @see element
      */
-    @XmlDsl
+    @XmlMarker
     public inline operator fun String.invoke(block: XmlElement.() -> Unit): XmlElement =
         XmlElement(this@XmlDocument, this).apply(block)
     
-    @XmlDsl
+    @XmlMarker
     public inline fun attributes(block: XmlAttributesContainer.() -> Unit) = XmlAttributesContainer(root).apply(block)
     
-    @XmlDsl
+    @UseExperimental(ExperimentalFeature::class)
+    @XmlMarker
     public fun <V : Any> attributes(vararg attributes: Pair<String, V>) {
         for ((name, value) in attributes) {
-            root.element[name] = value.toString()
+            root.element.attributeMap[name] = value.toString()
         }
     }
     
     /**
      * @see String.invoke
      */
-    @XmlDsl
+    @XmlMarker
     public inline fun element(name: String, block: XmlElement.() -> Unit): XmlElement =
         XmlElement(this@XmlDocument, name).apply(block)
     
-    @XmlDsl
+    @XmlMarker
     public inline fun text(name: String, block: String.() -> String) {
-        root.element[ChildType.TEXT_NODE] = String().block()
+        root.element.appendTextContainer(name, String().block())
     }
     
     /**
@@ -130,43 +135,38 @@ public class XmlElement(
 ) : XmlEntity() {
     
     public val element: Element by lazy {
-        if (name != null) {
-            if (parent != null) {
-                parent.element.set(ChildType.ELEMENT, name) as Element
-            } else {
-                document.source.set(ChildType.ELEMENT, name) as Element
-            }
-        } else {
-            document.source.documentElement
+        when {
+            name != null -> parent?.element?.appendElement(name) ?: document.source.appendElement(name)
+            else -> document.source.documentElement
         }
     }
     
-    @XmlDsl
+    @XmlMarker
     public inline operator fun String.invoke(block: XmlElement.() -> Unit): XmlElement =
         XmlElement(this@XmlElement.document, this, parent = this@XmlElement).apply(block)
     
-    @XmlDsl
+    @XmlMarker
     public inline fun text(block: String.() -> String) {
-        element[ChildType.TEXT_NODE] = String().block()
+        element.appendTextNode(String().block())
     }
     
-    @XmlDsl
+    @XmlMarker
     public inline fun text(name: String, block: String.() -> String) {
-        val parent = element.appendChild(document.source.createElement(name))
-        parent[ChildType.TEXT_NODE] = String().block()
+        element.appendTextContainer(name, String().block())
     }
     
-    @XmlDsl
+    @XmlMarker
     public inline fun element(name: String, block: XmlElement.() -> Unit): XmlElement =
         XmlElement(document, name, this).apply(block)
     
-    @XmlDsl
+    @XmlMarker
     public inline fun attributes(block: XmlAttributesContainer.() -> Unit) = XmlAttributesContainer(this).apply(block)
     
-    @XmlDsl
+    @XmlMarker
+    @UseExperimental(ExperimentalFeature::class)
     public fun <V : Any> attributes(vararg attributes: Pair<String, V>) {
         for ((name, value) in attributes) {
-            element[name] = value.toString()
+            element.attributeMap[name] = value.toString()
         }
     }
     
@@ -176,29 +176,33 @@ public class XmlElement(
 
 public class XmlAttributesContainer(public val parent: XmlElement) : XmlEntity() {
     
-    @XmlDsl
+    @XmlMarker
+    @UseExperimental(ExperimentalFeature::class)
     public inline operator fun <V : Any> String.invoke(block: Any.() -> V) {
-        parent.element[this] = Any().block().toString()
+        parent.element.attributeMap[this] = Any().block().toString()
     }
     
-    @XmlDsl
+    @XmlMarker
+    @UseExperimental(ExperimentalFeature::class)
     public operator fun <V : Any> String.get(value: V) {
-        parent.element[this] = value.toString()
+        parent.element.attributeMap[this] = value.toString()
     }
     
-    @XmlDsl
+    @XmlMarker
+    @UseExperimental(ExperimentalFeature::class)
     public fun <V : Any> attribute(name: String, value: V) {
-        parent.element[name] = value.toString()
+        parent.element.attributeMap[name] = value.toString()
     }
     
-    @XmlDsl
+    @XmlMarker
+    @UseExperimental(ExperimentalFeature::class)
     public inline fun <V : Any> attribute(name: String, block: Any.() -> V) {
-        parent.element[name] = Any().block().toString()
+        parent.element.attributeMap[name] = Any().block().toString()
     }
 }
 
-@XmlDsl
-public inline fun xml(root: String, body: XmlDocument.() -> Unit): XmlDocument = XmlDocument(root).apply(body)
+@XmlMarker
+public inline fun xml(body: XmlDocument.() -> Unit): XmlDocument = XmlDocument(null).apply(body)
 
-@XmlDsl
-public inline fun kxml(root: String, body: XmlDocument.() -> Unit): XmlDocument = XmlDocument(root).apply(body)
+@XmlMarker
+public inline fun xml(root: String, body: XmlDocument.() -> Unit): XmlDocument = XmlDocument(root).apply(body)
