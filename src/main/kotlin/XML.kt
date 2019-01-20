@@ -18,7 +18,6 @@
 
 package moe.kanon.xml
 
-import moe.kanon.kextensions.dom.*
 import moe.kanon.kextensions.io.div
 import moe.kanon.kextensions.io.not
 import org.w3c.dom.Document
