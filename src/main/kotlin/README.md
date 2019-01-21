@@ -9,6 +9,7 @@
     - [Builder How-To](#builder-how-to)
 - [XmlParser](#xmlparser)
     - [Parser How-To](#parser-how-to)
+- [Footnotes](#footnotes)
 
 ## XmlBuilder
 
@@ -73,6 +74,8 @@ If nothing is specified inside of the closure, it will become a self-closing tag
 Attributes, much like Elements, can be created at the root level and inside of an element, though the latter is more common.
 
 Something to keep in mind when working with attributes is that they're *not* appended onto the element in the order they were added, but rather in alphabetical order, as per the XML Specification.
+
+It is recommended to always put the attributes as the first thing of whatever you're doing, be it at the root level or element level. This is because attributes are right next to the actual element in the XML output, so it's good practice to mimic this in the DSL.
 
 ```kotlin
     xml("root") {
@@ -170,6 +173,40 @@ They're also different because they're the only object in which all of the funct
     </root>
     ```
 
+#### Comments
+
+```kotlin
+xml("root") {
+    // Closure variant.
+    comment { "I'm a comment!" }
+    
+    element("person") {
+        attributes {
+            attribute("name") { "Hazuki Kanon" }
+            attribute("sweet") { false }
+        }
+        // You can put comments pretty much anywhere, they're good for explaining
+        // concepts in an XML file that's supposed to be read by a human.
+        comment { "We can be anywhere!" }
+    }
+    
+    // Function variant.
+    comment("I'm also a comment!")
+}
+```
+XML Output:
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<root>
+  <!--I'm a comment!-->
+  <person name="Hazuki Kanon" sweet="false">
+    <!--We can be anywhere!-->
+  </person>
+  <!--I'm also a comment!-->
+</root>
+```
+
+
 ### Builder How-To
 - - -
 
@@ -180,6 +217,7 @@ To start building your XML file you'll need to call the `xml` function, which ta
 ### Parser How-To
 
 
+## Footnotes
 
 [^1]: Accents/Syntax, simply just the way you write the DSL.
 [^2]: It is recommended to stick with one accent per DSL rather than switching it up within the same DSL, this is to make the code look coherent. Wildly switching between the different accents in the same DSL will end up with code that looks confusing and ugly.

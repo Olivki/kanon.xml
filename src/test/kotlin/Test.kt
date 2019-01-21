@@ -45,10 +45,21 @@ object Test {
     
     val testDoc =
         xml("root") {
-            // This accomplishes the same thing as the example shown for the closure variant.
-            // The function version creates the element container and then appends the specified text.
-            // This means that unless you need to do additional work on the text container, this is the preferred method.
-            text(tagName = "textContainer") { "I'm a text container!" }
+            // Closure variant.
+            comment { "I'm a comment!" }
+        
+            element("person") {
+                attributes {
+                    attribute("name") { "Hazuki Kanon" }
+                    attribute("sweet") { false }
+                }
+                // You can put comments pretty much anywhere, they're good for explaining
+                // concepts in an XML file that's supposed to be read by a human.
+                comment { "We can be anywhere!" }
+            }
+        
+            // Function variant.
+            comment("I'm also a comment!")
         }
     
     @JvmStatic

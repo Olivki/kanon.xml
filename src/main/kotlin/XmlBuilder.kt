@@ -20,10 +20,7 @@
 package moe.kanon.xml
 
 import moe.kanon.kextensions.ExperimentalFeature
-import moe.kanon.kextensions.dom.appendElement
-import moe.kanon.kextensions.dom.appendTextContainer
-import moe.kanon.kextensions.dom.appendTextNode
-import moe.kanon.kextensions.dom.attributeMap
+import moe.kanon.kextensions.dom.*
 import moe.kanon.kextensions.io.div
 import moe.kanon.kextensions.io.not
 import org.w3c.dom.Document
@@ -54,12 +51,7 @@ public class XmlDocument(rootName: String) : XmlEntity() {
     
     public val root: XmlElement = XmlElement(this, rootName, null)
     
-    /**
-     * @see element
-     */
-    @XmlMarker
-    public inline operator fun String.invoke(block: XmlElement.() -> Unit): XmlElement =
-        XmlElement(this@XmlDocument, this).apply(block)
+    // Attributes
     
     @XmlMarker
     public inline fun attributes(block: XmlAttributesContainer.() -> Unit) = XmlAttributesContainer(root).apply(block)
@@ -72,16 +64,33 @@ public class XmlDocument(rootName: String) : XmlEntity() {
         }
     }
     
-    /**
-     * @see String.invoke
-     */
+    // Element
+    
+    @XmlMarker
+    public inline operator fun String.invoke(block: XmlElement.() -> Unit): XmlElement =
+        XmlElement(this@XmlDocument, this).apply(block)
+    
     @XmlMarker
     public inline fun element(tagName: String, block: XmlElement.() -> Unit): XmlElement =
         XmlElement(this@XmlDocument, tagName).apply(block)
     
+    // Text
+    
     @XmlMarker
     public inline fun text(tagName: String, block: String.() -> String) {
         root.element.appendTextContainer(tagName, String().block())
+    }
+    
+    // Comment
+    
+    @XmlMarker
+    public inline fun comment(data: String.() ->  String) {
+        root.element.appendComment(String().data())
+    }
+    
+    @XmlMarker
+    public fun comment(data: String) {
+        root.element.appendComment(data)
     }
     
     /**
@@ -90,9 +99,9 @@ public class XmlDocument(rootName: String) : XmlEntity() {
      * @param directory The directory in which the file will be saved.
      * @param name The name of the file.
      */
-    public fun saveTo(directory: Path, name: String): Path {
+    public fun saveTo(directory: Path, name: String, indent: Int = 2): Path {
         val file = directory / name
-        val (source, transformer) = createSource()
+        val (source, transformer) = createSource(indent)
         val result = StreamResult(!file)
         
         transformer.transform(source, result)
@@ -109,12 +118,12 @@ public class XmlDocument(rootName: String) : XmlEntity() {
         return writer.buffer.toString()
     }
     
-    internal fun createSource(): Pair<DOMSource, Transformer> {
+    public fun createSource(indent: Int = 2): Pair<DOMSource, Transformer> {
         val factory = TransformerFactory.newInstance()
         val transformer = factory.newTransformer()
         
         transformer.setOutputProperty(OutputKeys.INDENT, "yes")
-        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2")
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "$indent")
         
         return DOMSource(source) to transformer
     }
@@ -128,9 +137,30 @@ public class XmlElement(
     
     public val element: Element = parent?.element?.appendElement(name) ?: document.source.appendElement(name)
     
+    // Attributes
+    
+    @XmlMarker
+    public inline fun attributes(block: XmlAttributesContainer.() -> Unit) = XmlAttributesContainer(this).apply(block)
+    
+    @XmlMarker
+    @UseExperimental(ExperimentalFeature::class)
+    public fun <V : Any> attributes(vararg attributes: Pair<String, V>) {
+        for ((name, value) in attributes) {
+            element.attributeMap[name] = value.toString()
+        }
+    }
+    
+    // Element
+    
     @XmlMarker
     public inline operator fun String.invoke(block: XmlElement.() -> Unit): XmlElement =
         XmlElement(this@XmlElement.document, this, parent = this@XmlElement).apply(block)
+    
+    @XmlMarker
+    public inline fun element(tagName: String, block: XmlElement.() -> Unit): XmlElement =
+        XmlElement(document, tagName, this).apply(block)
+    
+    // Text
     
     @XmlMarker
     public inline fun text(block: String.() -> String) {
@@ -142,19 +172,16 @@ public class XmlElement(
         element.appendTextContainer(tagName, String().block())
     }
     
-    @XmlMarker
-    public inline fun element(tagName: String, block: XmlElement.() -> Unit): XmlElement =
-        XmlElement(document, tagName, this).apply(block)
+    // Comment
     
     @XmlMarker
-    public inline fun attributes(block: XmlAttributesContainer.() -> Unit) = XmlAttributesContainer(this).apply(block)
+    public inline fun comment(data: String.() ->  String) {
+        element.appendComment(String().data())
+    }
     
     @XmlMarker
-    @UseExperimental(ExperimentalFeature::class)
-    public fun <V : Any> attributes(vararg attributes: Pair<String, V>) {
-        for ((name, value) in attributes) {
-            element.attributeMap[name] = value.toString()
-        }
+    public fun comment(data: String) {
+       element.appendComment(data)
     }
     
     public override fun toString(): String = element.toString()
