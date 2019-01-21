@@ -43,7 +43,8 @@ import javax.xml.transform.stream.StreamResult
 /**
  * The [DslMarker] for kanon.xml.
  */
-@DslMarker public annotation class XmlMarker
+@DslMarker
+public annotation class XmlMarker
 
 public sealed class XmlEntity
 
@@ -79,8 +80,8 @@ public class XmlDocument(rootName: String) : XmlEntity() {
         XmlElement(this@XmlDocument, tagName).apply(block)
     
     @XmlMarker
-    public inline fun text(name: String, block: String.() -> String) {
-        root.element.appendTextContainer(name, String().block())
+    public inline fun text(tagName: String, block: String.() -> String) {
+        root.element.appendTextContainer(tagName, String().block())
     }
     
     /**
@@ -137,13 +138,13 @@ public class XmlElement(
     }
     
     @XmlMarker
-    public inline fun text(name: String, block: String.() -> String) {
-        element.appendTextContainer(name, String().block())
+    public inline fun text(tagName: String, block: String.() -> String) {
+        element.appendTextContainer(tagName, String().block())
     }
     
     @XmlMarker
-    public inline fun element(name: String, block: XmlElement.() -> Unit): XmlElement =
-        XmlElement(document, name, this).apply(block)
+    public inline fun element(tagName: String, block: XmlElement.() -> Unit): XmlElement =
+        XmlElement(document, tagName, this).apply(block)
     
     @XmlMarker
     public inline fun attributes(block: XmlAttributesContainer.() -> Unit) = XmlAttributesContainer(this).apply(block)
@@ -187,10 +188,8 @@ public class XmlAttributesContainer(public val parent: XmlElement) : XmlEntity()
     }
     
     @UseExperimental(ExperimentalFeature::class)
-    public override fun toString(): String {
-        //return parent.element.attributeMap[]
-        return ""
-    }
+    public override fun toString(): String =
+        "${parent.name}(${parent.element.attributeMap.asSequence().joinToString { "[${it.key}:${it.value}]" }})"
 }
 
 @XmlMarker

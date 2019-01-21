@@ -27,7 +27,7 @@ repositories {
 }
 
 dependencies {
-    implementation "moe.kanon.kextensions:kanon.kextensions:0.4.1"
+    implementation "moe.kanon.kextensions:kanon.kextensions:0.5.0"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"

@@ -45,38 +45,10 @@ object Test {
     
     val testDoc =
         xml("root") {
-            element("element") {
-                // All of these options accept *any* value as the actual value for the attribute, but keep in mind that
-                // the way they get "serialized" is via the toString() method. If you want a certain object to be serialized
-                // differently, you'll have to convert it to a string before-hand.
-    
-                // You can pick between using the attributes(vararg Pair<String, V>) function or the closure.
-                // You *can* use both and no issues would arise, you can also use them multiple times on the same element/root
-                // but this very much *not* recommended as it'd make your code very ugly.
-    
-                // Vararg function.
-                // Note: This only accepts Pairs, which are created here using the "to" infix function.
-                attributes("two" to 2, "true" to true)
-    
-                // Closure
-                attributes {
-                    // Inside of the closure you have 3 different styles you can pick from.
-        
-                    // String Invoke
-                    "one" { 1 }
-        
-                    // Closure.
-                    // The value inside of the closure will be the actual value of the attribute.
-                    attribute(name = "false") { false }
-        
-                    // Function.
-                    attribute(name = "name", value = "Slim Shady")
-        
-                    // You do not need to specify which parameter you're setting like done here, this is just to show what
-                    // the parameters actually set. So: attribute("false") { false } and attribute("name", "Slim Shady")
-                    // would work just fine, and is the recommended syntax.
-                }
-            }
+            // This accomplishes the same thing as the example shown for the closure variant.
+            // The function version creates the element container and then appends the specified text.
+            // This means that unless you need to do additional work on the text container, this is the preferred method.
+            text(tagName = "textContainer") { "I'm a text container!" }
         }
     
     @JvmStatic
