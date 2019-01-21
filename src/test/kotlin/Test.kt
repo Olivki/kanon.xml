@@ -43,29 +43,8 @@ object Test {
             }
         }
     
-    val noRootDocument =
-        xml {
-            "test" {
-                attributes {
-                    "test" { false }
-                    "steve" { 1.0 }
-                    attribute("darling", "02")
-                    attribute("franxx") { "darling" }
-                }
-                text { "hello" }
-            }
-            element("evenStevens") {
-                text("subChildText") { "I'm a text container." }
-                element("subChildElement") {
-                    attributes { "attr" { 13.37 } }
-                    text { "hello" }
-                }
-            }
-        }
-    
     @JvmStatic
     fun main(args: Array<String>) {
         println(document)
-        println(noRootDocument)
     }
 }
