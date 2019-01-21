@@ -15,7 +15,7 @@
  */
 
 @file:Suppress("MemberVisibilityCanBePrivate")
-@file:JvmName("KanonXml")
+@file:JvmName("XmlBuilder")
 
 package moe.kanon.xml
 
@@ -47,20 +47,11 @@ import javax.xml.transform.stream.StreamResult
 
 public sealed class XmlEntity
 
-/**
- * The main document from where everything is built.
- *
- * @property rootName The name of the root element of the document.
- */
-public class XmlDocument(rootName: String?) : XmlEntity() {
+public class XmlDocument(rootName: String) : XmlEntity() {
     
-    public val source: Document by lazy {
-        DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument()
-    }
+    public val source: Document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument()
     
-    public val root: XmlElement by lazy {
-        if (rootName != null) XmlElement(this, rootName, null) else XmlElement(this, null, null)
-    }
+    public val root: XmlElement = XmlElement(this, rootName, null)
     
     /**
      * @see element
@@ -72,8 +63,8 @@ public class XmlDocument(rootName: String?) : XmlEntity() {
     @XmlMarker
     public inline fun attributes(block: XmlAttributesContainer.() -> Unit) = XmlAttributesContainer(root).apply(block)
     
-    @UseExperimental(ExperimentalFeature::class)
     @XmlMarker
+    @UseExperimental(ExperimentalFeature::class)
     public fun <V : Any> attributes(vararg attributes: Pair<String, V>) {
         for ((name, value) in attributes) {
             root.element.attributeMap[name] = value.toString()
@@ -84,8 +75,8 @@ public class XmlDocument(rootName: String?) : XmlEntity() {
      * @see String.invoke
      */
     @XmlMarker
-    public inline fun element(name: String, block: XmlElement.() -> Unit): XmlElement =
-        XmlElement(this@XmlDocument, name).apply(block)
+    public inline fun element(tagName: String, block: XmlElement.() -> Unit): XmlElement =
+        XmlElement(this@XmlDocument, tagName).apply(block)
     
     @XmlMarker
     public inline fun text(name: String, block: String.() -> String) {
@@ -93,7 +84,7 @@ public class XmlDocument(rootName: String?) : XmlEntity() {
     }
     
     /**
-     * Saves the document to the specified [directory] with the specified [name].
+     * Saves the xml document to the specified [directory] with the specified [name].
      *
      * @param directory The directory in which the file will be saved.
      * @param name The name of the file.
@@ -130,16 +121,11 @@ public class XmlDocument(rootName: String?) : XmlEntity() {
 
 public class XmlElement(
     public val document: XmlDocument,
-    public val name: String?,
+    public val name: String,
     public val parent: XmlElement? = document.root
 ) : XmlEntity() {
     
-    public val element: Element by lazy {
-        when {
-            name != null -> parent?.element?.appendElement(name) ?: document.source.appendElement(name)
-            else -> document.source.documentElement
-        }
-    }
+    public val element: Element = parent?.element?.appendElement(name) ?: document.source.appendElement(name)
     
     @XmlMarker
     public inline operator fun String.invoke(block: XmlElement.() -> Unit): XmlElement =
@@ -199,10 +185,13 @@ public class XmlAttributesContainer(public val parent: XmlElement) : XmlEntity()
     public inline fun <V : Any> attribute(name: String, block: Any.() -> V) {
         parent.element.attributeMap[name] = Any().block().toString()
     }
+    
+    @UseExperimental(ExperimentalFeature::class)
+    public override fun toString(): String {
+        //return parent.element.attributeMap[]
+        return ""
+    }
 }
-
-@XmlMarker
-public inline fun xml(body: XmlDocument.() -> Unit): XmlDocument = XmlDocument(null).apply(body)
 
 @XmlMarker
 public inline fun xml(root: String, body: XmlDocument.() -> Unit): XmlDocument = XmlDocument(root).apply(body)
