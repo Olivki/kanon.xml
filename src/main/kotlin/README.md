@@ -23,10 +23,10 @@ kanon.xml supports a variety of "accents"[^1], the accents vary from verbose to 
 **Name Explanation**:
 - `/* ... */` represents an area that can be filled with code.
 - "root level" means directly inside of the `xml(...) { ... }` closure.
-- "element level" means inside of another element closure.
+- "element level" means inside of another element [closure](https://en.wikipedia.org/wiki/Closure_(computer_programming)).
 - Any strings/names used in these examples can and *should* be replaced with appropriate names.
 
-**Note**: Because these documents will *always*[^3] have a `root` element, any function that works on an Element, will work at the root level, they will just be appended onto the `root` element instead.
+**Note**: Because these documents will *always*[^3] have a `root` element, most functions that work on an Element, will work at the root level, they will just be appended onto the `root` element instead.
 
 #### Elements
 - - -
@@ -232,7 +232,7 @@ val people = listOf(
 )
 ```
 
-And finally, suppose we want to serialize this list to a XML document;
+And finally, suppose we want to serialize this list into a XML document;
 
 - **Verbose**
     ```kotlin

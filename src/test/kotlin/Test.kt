@@ -45,21 +45,48 @@ object Test {
     
     val testDoc =
         xml("root") {
-            // Closure variant.
-            comment { "I'm a comment!" }
-            
-            element("person") {
-                attributes {
-                    attribute("name") { "Hazuki Kanon" }
-                    attribute("sweet") { false }
-                }
-                // You can put comments pretty much anywhere, they're good for explaining
-                // concepts in an XML file that's supposed to be read by a human.
-                comment { "We can be anywhere!" }
+            // When doing anything with attributes at the root level they will be appended to the root element.
+        
+            // All of these options accept *any* value as the actual value for the attribute, but keep in mind that
+            // the way they get "serialized" is via the toString() method. If you want a certain object to be serialized
+            // differently, you'll have to convert it to a string before-hand.
+        
+            // You can pick between using the attributes(vararg Pair<String, V>) function or the closure.
+            // You *can* use both and no issues would arise, you can also use them multiple times on the same element/root
+            // but this very much *not* recommended as it'd make your code very ugly.
+        
+            // Vararg function.
+            // Note: This only accepts Pairs, which are created here using the "to" infix function.
+            attributes("two" to 2, "true" to true)
+        
+            // Closure
+            attributes {
+                // Inside of the closure you have 3 different styles you can pick from.
+                // String Invoke
+                "one" { 1 }
+                // String Get
+                "two"[2]
+                // Closure.
+                // The value inside of the closure will be the actual value of the attribute.
+                attribute(name = "false") { false }
+                // Function.
+                attribute(name = "name", value = "Slim Shady")
+                // You do not need to specify which parameter you're setting like done here, this is just to show what
+                // the parameters actually set. So: attribute("false") { false } and attribute("name", "Slim Shady")
+                // would work just fine, and is actually the recommended syntax.
             }
+        
+            // Showcase of it on an element.
+            element("element") {
+                attributes("darling" to 0 + 2, "death-and-taxes" to true)
             
-            // Function variant.
-            comment("I'm also a comment!")
+                attributes {
+                    "erio" { "touwa" }
+                    "fifty"[50]
+                    attribute("meaning") { 42 }
+                    attribute("rock", "kent")
+                }
+            }
         }
     
     val people = listOf(
@@ -73,19 +100,17 @@ object Test {
         xml("people") {
             for ((name, gender, age, occupation) in people) {
                 element("person") {
-                    attributes {
-                        attribute("name") { name }
-                        attribute("gender") { gender }
-                        attribute("age") { age }
-                        attribute("occupation") { occupation }
-                    }
+                    text("name") { name }
+                    text("gender") { gender.toString() }
+                    text("age") { age.toString() }
+                    text("occupation") { occupation }
                 }
             }
         }
     
     @JvmStatic
     fun main(args: Array<String>) {
-        println(peopleDocument)
+        println(testDoc)
     }
 }
 
