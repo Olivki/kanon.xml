@@ -6,6 +6,7 @@
         - [Elements](#elements)
         - [Attributes](#attributes)
         - [TextNodes](#textnodes)
+        - [Comments](#comments)
     - [Builder How-To](#builder-how-to)
 - [XmlParser](#xmlparser)
     - [Parser How-To](#parser-how-to)
@@ -43,7 +44,6 @@ If nothing is specified inside of the closure, it will become a self-closing tag
         element(tagName = "secondElement") { /*...*/ }
     }
     ```
-    XML Output:
     ```xml
     <?xml version="1.0" encoding="UTF-8" standalone="no"?>
     <root>
@@ -59,7 +59,6 @@ If nothing is specified inside of the closure, it will become a self-closing tag
         }
     }
     ```
-    XML Output:
     ```xml
     <?xml version="1.0" encoding="UTF-8" standalone="no"?>
     <root>
@@ -120,7 +119,6 @@ It is recommended to always put the attributes as the first thing of whatever yo
         }
     }
 ```
-XML Output:
 ```xml
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <root false="false" name="Slim Shady" one="1" true="true" two="2">
@@ -149,7 +147,6 @@ They're also different because they're the only object in which all of the funct
         }
     }
     ```
-    XML Output:
     ```xml
     <?xml version="1.0" encoding="UTF-8" standalone="no"?>
     <root>
@@ -165,7 +162,6 @@ They're also different because they're the only object in which all of the funct
         text(tagName = "textContainer") { "I'm a text container!" }
     }
     ```
-    XML Output:
     ```xml
     <?xml version="1.0" encoding="UTF-8" standalone="no"?>
     <root>
@@ -194,7 +190,6 @@ xml("root") {
     comment("I'm also a comment!")
 }
 ```
-XML Output:
 ```xml
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <root>
@@ -206,11 +201,106 @@ XML Output:
 </root>
 ```
 
-
 ### Builder How-To
 - - -
 
 To start building your XML file you'll need to call the `xml` function, which takes a string parameter called `root`[^3].
+
+Now, suppose we have a data class that contains basic information about a person;
+
+```kotlin
+enum class Gender {
+    MALE, FEMALE
+}
+
+data class Person(
+    val name: String, 
+    val gender: Gender, 
+    val age: Int, 
+    val occupation: String
+)
+```
+
+Suppose we also have a list of people that are represented using this data class;
+
+```kotlin
+val people = listOf(
+    Person("John Doe", Gender.MALE, 20, "Chaser"),
+    Person("Mary Sue", Gender.FEMALE, 22, "Mary Sue"),
+    Person("Hazuki Kanon", Gender.FEMALE, 16, "High School Student"),
+    Person("SCP-049", Gender.MALE, 2462, "Plauge Doctor")
+)
+```
+
+And finally, suppose we want to serialize this list to a XML document;
+
+- **Verbose**
+    ```kotlin
+    xml("people") {
+        for ((name, gender, age, occupation) in people) {
+            element("person") {
+                text("name") { name }
+                text("gender") { gender.toString() }
+                text("age") { age.toString() }
+                text("occupation") { occupation }
+            }
+        }
+    }
+    ```
+    ```xml
+    <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+    <people>
+      <person>
+        <name>John Doe</name>
+        <gender>MALE</gender>
+        <age>20</age>
+        <occupation>Chaser</occupation>
+      </person>
+      <person>
+        <name>Mary Sue</name>
+        <gender>FEMALE</gender>
+        <age>22</age>
+        <occupation>Mary Sue</occupation>
+      </person>
+      <person>
+        <name>Hazuki Kanon</name>
+        <gender>FEMALE</gender>
+        <age>16</age>
+        <occupation>High School Student</occupation>
+      </person>
+      <person>
+        <name>SCP-049</name>
+        <gender>MALE</gender>
+        <age>2462</age>
+        <occupation>Plauge Doctor</occupation>
+      </person>
+    </people>
+    ```
+
+- **Concise**
+    ```kotlin
+    xml("people") {
+        for ((name, gender, age, occupation) in people) {
+            element("person") {
+                attributes {
+                    attribute("name") { name }
+                    attribute("gender") { gender }
+                    attribute("age") { age }
+                    attribute("occupation") { occupation }
+                }
+            }
+        }
+    }
+    ```
+    ```xml
+    <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+    <people>
+      <person age="20" gender="MALE" name="John Doe" occupation="Chaser"/>
+      <person age="22" gender="FEMALE" name="Mary Sue" occupation="Mary Sue"/>
+      <person age="16" gender="FEMALE" name="Hazuki Kanon" occupation="High School Student"/>
+      <person age="2462" gender="MALE" name="SCP-049" occupation="Plauge Doctor"/>
+    </people>
+    ```
 
 ## XmlParser
 

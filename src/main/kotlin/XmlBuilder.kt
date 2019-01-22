@@ -43,6 +43,9 @@ import javax.xml.transform.stream.StreamResult
 @DslMarker
 public annotation class XmlMarker
 
+@XmlMarker
+public annotation class AttributeMarker
+
 public sealed class XmlEntity
 
 public class XmlDocument(rootName: String) : XmlEntity() {

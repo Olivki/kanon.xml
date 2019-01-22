@@ -47,7 +47,7 @@ object Test {
         xml("root") {
             // Closure variant.
             comment { "I'm a comment!" }
-        
+            
             element("person") {
                 attributes {
                     attribute("name") { "Hazuki Kanon" }
@@ -57,13 +57,40 @@ object Test {
                 // concepts in an XML file that's supposed to be read by a human.
                 comment { "We can be anywhere!" }
             }
-        
+            
             // Function variant.
             comment("I'm also a comment!")
         }
     
+    val people = listOf(
+        Person("John Doe", Gender.MALE, 20, "Chaser"),
+        Person("Mary Sue", Gender.FEMALE, 22, "Mary Sue"),
+        Person("Hazuki Kanon", Gender.FEMALE, 16, "High School Student"),
+        Person("SCP-049", Gender.MALE, 2462, "Plauge Doctor")
+    )
+    
+    val peopleDocument =
+        xml("people") {
+            for ((name, gender, age, occupation) in people) {
+                element("person") {
+                    attributes {
+                        attribute("name") { name }
+                        attribute("gender") { gender }
+                        attribute("age") { age }
+                        attribute("occupation") { occupation }
+                    }
+                }
+            }
+        }
+    
     @JvmStatic
     fun main(args: Array<String>) {
-        println(testDoc)
+        println(peopleDocument)
     }
 }
+
+enum class Gender {
+    MALE, FEMALE
+}
+
+data class Person(val name: String, val gender: Gender, val age: Int, val occupation: String)
