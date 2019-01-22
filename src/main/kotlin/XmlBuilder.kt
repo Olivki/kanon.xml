@@ -99,6 +99,20 @@ public class XmlDocumentContainer(rootName: String) {
         }
     }
     
+    // Might implement this system at a later date.
+    /*public fun <V : Any> attributes(vararg attributes: Pair<String, V>) {
+        for ((name, value) in attributes) {
+            try {
+                root.source.attributeMap[name] = value.toString()
+            } catch (e: Exception) {
+                when (e) {
+                    is XmlBuilderException -> throw e
+                    else -> XmlBuilderException("root.$root.name(attribute[name=$name, value=$value])", e)
+                }
+            }
+        }
+    }*/
+    
     // Element
     /**
      * Creates and appends a new [Element] to the [root] of this document.
@@ -184,9 +198,8 @@ public class XmlDocumentContainer(rootName: String) {
      *
      * @param directory The directory in which the file will be saved.
      * @param fileName The name of the file. *(This is the full file name, including the extensions.)*
-     * @param indentation How big the indentation of the serialized file should be.
      */
-    public fun saveTo(directory: Path, fileName: String, indentation: Int = 2): Path {
+    public fun saveTo(directory: Path, fileName: String): Path {
         val file = directory / fileName
         val source = DOMSource(source)
         val result = StreamResult(!file)

@@ -16,6 +16,8 @@
 
 package moe.kanon.xml
 
+// Currently these exceptions are unused, but they might get used at a later date.
+
 /**
  * Thrown whenever an exception is encountered when trying to build an XML document with the builder DSL.
  *
