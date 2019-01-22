@@ -7,9 +7,9 @@
         - [Attributes](#attributes)
         - [TextNodes](#textnodes)
         - [Comments](#comments)
-    - [Builder How-To](#builder-how-to)
+    - [Builder Example](#builder-example)
 - [XmlParser](#xmlparser)
-    - [Parser How-To](#parser-how-to)
+    - [Parser Example](#parser-example)
 - [Footnotes](#footnotes)
 
 ## XmlBuilder
@@ -201,7 +201,7 @@ xml("root") {
 </root>
 ```
 
-### Builder How-To
+### Builder Example
 - - -
 
 To start building your XML file you'll need to call the `xml` function, which takes a string parameter called `root`[^3].
@@ -304,7 +304,7 @@ And finally, suppose we want to serialize this list to a XML document;
 
 ## XmlParser
 
-### Parser How-To
+### Parser Example
 
 
 ## Footnotes
