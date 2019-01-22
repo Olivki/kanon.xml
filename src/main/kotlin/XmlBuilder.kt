@@ -57,6 +57,25 @@ public class XmlDocumentContainer(rootName: String) {
      */
     public val root: XmlElementContainer = XmlElementContainer(this, rootName, null)
     
+    /**
+     * The [Transformer] instance this document uses to serialize itself.
+     */
+    public val transformer: Transformer = TransformerFactory.newInstance().newTransformer()
+    
+    init {
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes")
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2")
+    }
+    
+    // Transformer
+    /**
+     * Creates a new instance of the [XmlTransformerContainer] scope, applying all the properties defined inside of the
+     * [properties] closure to the `transformer` of this document.
+     */
+    @XmlMarker
+    public inline fun transformer(properties: XmlTransformerContainer.() -> Unit) =
+        XmlTransformerContainer(this).apply(properties)
+    
     // Attributes
     /**
      * Creates a new instance of the [XmlAttributesContainer] scope, applying all the attributes defined inside of
@@ -95,8 +114,8 @@ public class XmlDocumentContainer(rootName: String) {
      * @return The newly created `Element`.
      */
     @XmlMarker
-    public inline operator fun String.invoke(container: XmlElementContainer.() -> Unit = {}): Element =
-        XmlElementContainer(this@XmlDocumentContainer, this).apply(container).source
+    public inline operator fun String.invoke(container: XmlElementContainer.() -> Unit = {}): XmlElementContainer =
+        XmlElementContainer(this@XmlDocumentContainer, this).apply(container)
     
     /**
      * Creates and appends a new [Element] to the [root] of this document.
@@ -110,8 +129,8 @@ public class XmlDocumentContainer(rootName: String) {
      * @return The newly created `Element`.
      */
     @XmlMarker
-    public inline fun element(tagName: String, container: XmlElementContainer.() -> Unit = {}): Element =
-        XmlElementContainer(this@XmlDocumentContainer, tagName).apply(container).source
+    public inline fun element(tagName: String, container: XmlElementContainer.() -> Unit = {}): XmlElementContainer =
+        XmlElementContainer(this@XmlDocumentContainer, tagName).apply(container)
     
     // Text
     /**
@@ -161,19 +180,6 @@ public class XmlDocumentContainer(rootName: String) {
     public fun comment(data: String): Comment = root.source.appendComment(data)
     
     /**
-     * Returns a [DOMSource] set to this document, and a transformer with the specified [indentation] set as a property.
-     */
-    public fun createSource(indentation: Int = 2): Pair<DOMSource, Transformer> {
-        val factory = TransformerFactory.newInstance()
-        val transformer = factory.newTransformer()
-        
-        transformer.setOutputProperty(OutputKeys.INDENT, "yes")
-        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "$indentation")
-        
-        return DOMSource(source) to transformer
-    }
-    
-    /**
      * Saves the contents of this document to an XML file using the specified [fileName] to the [directory].
      *
      * @param directory The directory in which the file will be saved.
@@ -182,7 +188,7 @@ public class XmlDocumentContainer(rootName: String) {
      */
     public fun saveTo(directory: Path, fileName: String, indentation: Int = 2): Path {
         val file = directory / fileName
-        val (source, transformer) = createSource(indentation)
+        val source = DOMSource(source)
         val result = StreamResult(!file)
         
         transformer.transform(source, result)
@@ -191,7 +197,7 @@ public class XmlDocumentContainer(rootName: String) {
     }
     
     public override fun toString(): String {
-        val (source, transformer) = createSource()
+        val source = DOMSource(source)
         
         val writer = StringWriter()
         transformer.transform(source, StreamResult(writer))
@@ -237,6 +243,19 @@ public class XmlElementContainer(
      */
     public val source: Element = parent?.source?.appendElement(name) ?: document.source.appendElement(name)
     
+    /**
+     * The [Transformer] instance this element uses to serialize itself.
+     */
+    public val transformer: Transformer by lazy {
+        val trans = TransformerFactory.newInstance().newTransformer()
+        
+        trans.setOutputProperty(OutputKeys.INDENT, "yes")
+        trans.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2")
+        trans.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes")
+        
+        trans
+    }
+    
     // Attributes
     /**
      * Creates a new instance of the [XmlAttributesContainer] scope, applying all the attributes defined inside of
@@ -275,8 +294,8 @@ public class XmlElementContainer(
      * @return The newly created `Element`.
      */
     @XmlMarker
-    public inline operator fun String.invoke(container: XmlElementContainer.() -> Unit = {}): Element =
-        XmlElementContainer(this@XmlElementContainer.document, this, this@XmlElementContainer).apply(container).source
+    public inline operator fun String.invoke(container: XmlElementContainer.() -> Unit = {}): XmlElementContainer =
+        XmlElementContainer(this@XmlElementContainer.document, this, this@XmlElementContainer).apply(container)
     
     /**
      * Creates and appends a new [Element] to this element.
@@ -290,8 +309,8 @@ public class XmlElementContainer(
      * @return The newly created `Element`.
      */
     @XmlMarker
-    public inline fun element(tagName: String, container: XmlElementContainer.() -> Unit = {}): Element =
-        XmlElementContainer(document, tagName, this).apply(container).source
+    public inline fun element(tagName: String, container: XmlElementContainer.() -> Unit = {}): XmlElementContainer =
+        XmlElementContainer(document, tagName, this).apply(container)
     
     // Text
     /**
@@ -350,8 +369,14 @@ public class XmlElementContainer(
     @XmlMarker
     public fun comment(data: String): Comment = source.appendComment(data)
     
-    // TODO:
-    public override fun toString(): String = source.toString()
+    public override fun toString(): String {
+        val source = DOMSource(source)
+        
+        val writer = StringWriter()
+        transformer.transform(source, StreamResult(writer))
+        
+        return writer.buffer.toString()
+    }
     
 }
 
@@ -421,6 +446,62 @@ public class XmlAttributesContainer(public val parent: XmlElementContainer) {
     @UseExperimental(ExperimentalFeature::class)
     public override fun toString(): String =
         "${parent.name}(${parent.source.attributeMap.asSequence().joinToString { "[${it.key}:${it.value}]" }})"
+}
+
+/**
+ * A container class that enables easy access to setting the output properties of the XML generator.
+ *
+ * @property document The document for which this container will apply the transformer changes to.
+ */
+@XmlMarker
+public class XmlTransformerContainer(public val document: XmlDocumentContainer) {
+    
+    /**
+     * Clears all the parameters from the [transformer][XmlDocumentContainer.transformer].
+     *
+     * @see Transformer.clearParameters
+     */
+    @XmlMarker
+    public fun clearParameters() {
+        document.transformer.clearParameters()
+    }
+    
+    /**
+     * Sets a `parameter` on the [transformer][XmlDocumentContainer.transformer] with the specified [name] to the
+     * specified [value].
+     *
+     * @see Transformer.setParameter
+     */
+    @XmlMarker
+    public inline fun <V : Any> parameter(name: String, value: Any.() -> V) {
+        document.transformer.setParameter(name, Any().value())
+    }
+    
+    /**
+     * Sets an `output property` on the [transformer][XmlDocumentContainer.transformer] with the specified [name] to
+     * the specified return value of the [value] closure.
+     *
+     * @see OutputKeys
+     * @see Transformer.setOutputProperty
+     */
+    @XmlMarker
+    public inline fun property(name: String, value: String.() -> String) {
+        document.transformer.setOutputProperty(name, String().value())
+    }
+    
+    /**
+     * Sets an `output property` on the [transformer][XmlDocumentContainer.transformer] with the specified [name] to
+     * the specified [value].
+     *
+     * @see OutputKeys
+     * @see Transformer.setOutputProperty
+     */
+    @XmlMarker
+    public fun property(name: String, value: String) {
+        document.transformer.setOutputProperty(name, value)
+    }
+    
+    public override fun toString(): String = "${document.root}(${document.transformer.outputProperties})"
 }
 
 /**

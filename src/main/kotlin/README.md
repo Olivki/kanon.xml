@@ -7,6 +7,7 @@
         - [Attributes](#attributes)
         - [TextNodes](#textnodes)
         - [Comments](#comments)
+        - [Transformer Scope](#transformer-scope)
     - [Builder Example](#builder-example)
 - [XmlParser](#xmlparser)
     - [Parser Example](#parser-example)
@@ -200,6 +201,51 @@ xml("root") {
   <!--I'm also a comment!-->
 </root>
 ```
+
+#### Transformer Scope
+
+The transformer scope allows you to customize how to `Transformer` that's used to serialize the XML document works. (The `transformer` is used when you call either `toString()` or `saveTo(...)` on the document container.
+
+By default every document container has two properties set on creation:
+
+```yaml
+"indent":"yes"
+"{http://xml.apache.org/xslt}indent-amount":"2"
+```
+
+Which means that indentation is enabled *(aka pretty print)*, and that the indentation amount is set to 2 *(This means that for every increase of the indentation, it increases by 2.)*.
+
+Here's an example on how you could use the transformer scope:
+
+```kotlin
+xml("root") {
+        transformer {
+            // Closure Variant
+            // This tells the generator to not include the "<?xml version="1.0" encoding="UTF-8" standalone="no"?>" that's 
+            // normally included at the top of every XML output.
+            property(name = OutputKeys.OMIT_XML_DECLARATION) { "yes" }
+            // Function Variant
+            // This tells the generator to use an indentation of 4 rather than the default 2.
+            property(name = "{http://xml.apache.org/xslt}indent-amount", value = "4")
+        }
+            
+        element("element") {
+            attributes {
+                attribute("open") { false }
+            }
+                
+        text("child") { "Hello there!" }
+    }
+}
+```
+```xml
+<root>
+    <element open="false">
+        <child>Hello there!</child>
+    </element>
+</root>
+```
+
 
 ### Builder Example
 - - -
