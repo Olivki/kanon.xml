@@ -225,20 +225,20 @@ Here's an example on how you could use the transformer scope:
 
 ```kotlin
 xml("root") {
-        transformer {
-            // Closure Variant
-            // This tells the generator to not include the "<?xml version="1.0" encoding="UTF-8" standalone="no"?>" that's 
-            // normally included at the top of every XML output.
-            property(name = OutputKeys.OMIT_XML_DECLARATION) { "yes" }
-            // Function Variant
-            // This tells the generator to use an indentation of 4 rather than the default 2.
-            property(name = "{http://xml.apache.org/xslt}indent-amount", value = "4")
-        }
+    transformer {
+        // Closure Variant
+        // This tells the generator to not include the "<?xml version="1.0" encoding="UTF-8" standalone="no"?>" that's 
+        // normally included at the top of every XML output.
+        property(name = OutputKeys.OMIT_XML_DECLARATION) { "yes" }
+        // Function Variant
+        // This tells the generator to use an indentation of 4 rather than the default 2.
+        property(name = "{http://xml.apache.org/xslt}indent-amount", value = "4")
+    }
             
-        element("element") {
-            attributes {
-                attribute("open") { false }
-            }
+    element("element") {
+        attributes {
+            attribute("open") { false }
+        }
                 
         text("child") { "Hello there!" }
     }
