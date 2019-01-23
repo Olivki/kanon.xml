@@ -10,6 +10,7 @@
         - [Transformer Scope](#transformer-scope)
     - [Builder Example](#builder-example)
 - [XmlParser](#xmlparser)
+    - [Start Parsing](#start-parsing)
     - [Parser Example](#parser-example)
 - [Footnotes](#footnotes)
 
@@ -363,27 +364,94 @@ The XmlParser is designed to make traversing a document an easier experience, th
 
 XmlParser tries to accomplish this by utilizing a DSL which is very similar to that of the XmlBuilder one.
 
+### Start Parsing
+
+```kotlin
+// There are currently 3 ways to start using the XmlParser.
+
+// Directly of a "Document" instance.
+val document = ...
+
+document.parse { /* ... */ }
+
+// Off of a Path.
+val path = ...
+
+path.parseAsDocument { /* ... */ }
+
+// Off of a InputStream.
+val inputStream = ...
+
+inputStream.parseAsDocument { /* ... */ }
+
+```
+
+
 ### Parser Example
 
 Suppose we want to serialize the contents of the `people` document we made in the Builder Example:
 
 - Parsing the **verbose** version:
 ```kotlin
+// We're assuming that you saved the generated XML document to the directory "foo/bar/" under
+// the name "document.xml".
+val document: Path = KPath("foo", "bar", "document.xml")
+val people = ArrayList<Person>()
+        
+document.parseAsDocument {
+    elements("person") {
+        people += Person(
+            source["name"].textContent,
+            Gender.valueOf(source["gender"].textContent),
+            source["age"].textContent.toInt(),
+            source["occupation"].textContent
+        )
+    }
+}
+        
+println(people)
+```
+```
+Output (prettified):
+
+[Person(name=John Doe, gender=MALE, age=20, occupation=Chaser)
+Person(name=Mary Sue, gender=FEMALE, age=22, occupation=Mary Sue)
+Person(name=Hazuki Kanon, gender=FEMALE, age=16, occupation=High School Student)
+Person(name=SCP-049, gender=MALE, age=2462, occupation=Plauge Doctor)]
 
 ```
-```xml
-
-```
-
 
 - Parsing the **concise** version:
 ```kotlin
+// We're assuming that you saved the generated XML document to the directory "foo/bar/" under
+// the name "document.xml".
+val document: Path = KPath("foo", "bar", "document.xml")
+val people = ArrayList<Person>()
+        
+document.parseAsDocument {
+    elements("person") {
+        attributes {
+            people += Person(
+                attributes["name"]!!, // Putting the !! on the get operator is actually bad practice, but eh.
+                Gender.valueOf(attributes["gender"]!!),
+                attributes["age"]!!.toInt(),
+                attributes["occupation"]!!
+            )
+        }
+    }
+}
+        
+println(people)
+```
+```
+Output (prettified):
+
+[Person(name=John Doe, gender=MALE, age=20, occupation=Chaser)
+Person(name=Mary Sue, gender=FEMALE, age=22, occupation=Mary Sue)
+Person(name=Hazuki Kanon, gender=FEMALE, age=16, occupation=High School Student)
+Person(name=SCP-049, gender=MALE, age=2462, occupation=Plauge Doctor)]
 
 ```
-```xml
-
-```
-
 
 ## Footnotes
 
