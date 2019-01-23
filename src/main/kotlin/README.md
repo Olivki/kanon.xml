@@ -161,12 +161,17 @@ They're also different because they're the only object in which all of the funct
         // The function version creates the element container and then appends the specified text.
         // This means that unless you need to do additional work on the text container, this is the preferred method.
         text(tagName = "textContainer") { "I'm a text container!" }
+        // If you need to create multiple text nodes, and you don't want to take a bunch of lines
+        // you can make use of the "texts" function, which acts much like vararg attributes function.
+        texts("textContainerOne" to "I'm a text container!", "textContainerTwo" to "I'm also a text container!")
     }
     ```
     ```xml
     <?xml version="1.0" encoding="UTF-8" standalone="no"?>
     <root>
       <textContainer>I'm a text container!</textContainer>
+      <textContainerOne>I'm a text container!</textContainerOne>
+      <textContainerTwo>I'm also a text container!</textContainerTwo>
     </root>
     ```
 
@@ -209,8 +214,8 @@ The transformer scope allows you to customize how to `Transformer` that's used t
 By default every document container has two properties set on creation:
 
 ```yaml
-"indent":"yes"
-"{http://xml.apache.org/xslt}indent-amount":"2"
+indent:"yes"
+{http://xml.apache.org/xslt}indent-amount:"2"
 ```
 
 Which means that indentation is enabled *(aka pretty print)*, and that the indentation amount is set to 2 *(This means that for every increase of the indentation, it increases by 2.)*.
@@ -289,6 +294,8 @@ And finally, suppose we want to serialize this list into a XML document;
                 text("gender") { gender.toString() }
                 text("age") { age.toString() }
                 text("occupation") { occupation }
+                // or you could make use of the "texts" function for a more concise syntax.
+                //texts("name" to name, "gender" to gender.toString(), "age" to age.toString(), "occupation" to occupation)
             }
         }
     }
@@ -334,6 +341,8 @@ And finally, suppose we want to serialize this list into a XML document;
                     attribute("age") { age }
                     attribute("occupation") { occupation }
                 }
+                // or you could make use of the vararg attributes function for a more concise syntax.
+                // attributes("name" to name, "gender" to gender, "age" to age, "occupation" to occupation)
             }
         }
     }
@@ -350,9 +359,31 @@ And finally, suppose we want to serialize this list into a XML document;
 
 ## XmlParser
 
+The XmlParser is designed to make traversing a document an easier experience, the goal is to make it cleaner and easier to understand what a document is being parsed for.
+
+XmlParser tries to accomplish this by utilizing a DSL which is very similar to that of the XmlBuilder one.
+
 ### Parser Example
 
-TODO
+Suppose we want to serialize the contents of the `people` document we made in the Builder Example:
+
+- Parsing the **verbose** version:
+```kotlin
+
+```
+```xml
+
+```
+
+
+- Parsing the **concise** version:
+```kotlin
+
+```
+```xml
+
+```
+
 
 ## Footnotes
 

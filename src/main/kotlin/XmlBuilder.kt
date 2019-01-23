@@ -167,6 +167,17 @@ public class XmlDocumentContainer(rootName: String) {
     public inline fun text(tagName: String, data: String.() -> String): Element =
         root.source.appendTextContainer(tagName, String().data())
     
+    /**
+     * Appends all the entries from the [texts] `array` to the [root] element of this document.
+     *
+     * The [Pair] entries inside of `texts` are applied in such a way that [Pair.first] is assumed to be the `tagName`
+     * of the [Element] container, and [Pair.second] is assumed to be the `data` of the [TextNode][Text].
+     */
+    @XmlMarker
+    public fun texts(vararg texts: Pair<String, String>) {
+        for ((tagName, data) in texts) root.source.appendTextContainer(tagName, data)
+    }
+    
     // Comment
     /**
      * Creates and appends a new [Comment] to the [root] of this document.
@@ -355,6 +366,17 @@ public class XmlElementContainer(
     @XmlMarker
     public inline fun text(tagName: String, data: String.() -> String): Element =
         source.appendTextContainer(tagName, String().data())
+    
+    /**
+     * Appends all the entries from the [texts] `array` to this element.
+     *
+     * The [Pair] entries inside of `texts` are applied in such a way that [Pair.first] is assumed to be the `tagName`
+     * of the [Element] container, and [Pair.second] is assumed to be the `data` of the [TextNode][Text].
+     */
+    @XmlMarker
+    public fun texts(vararg texts: Pair<String, String>) {
+        for ((tagName, data) in texts) source.appendTextContainer(tagName, data)
+    }
     
     // Comment
     /**
