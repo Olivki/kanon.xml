@@ -19,10 +19,7 @@
 
 package moe.kanon.xml
 
-import moe.kanon.kextensions.dom.asSequence
-import moe.kanon.kextensions.dom.contains
-import moe.kanon.kextensions.dom.get
-import moe.kanon.kextensions.dom.indexOf
+import moe.kanon.kextensions.dom.*
 import moe.kanon.kextensions.io.newInputStream
 import org.w3c.dom.Attr
 import org.w3c.dom.Document
@@ -48,7 +45,7 @@ import javax.xml.transform.stream.StreamResult
 public data class ParserDocument(public val source: Document) {
     
     /**
-     * The root elemennt of this document.
+     * The root element of this document.
      */
     public val root: Element = source.documentElement // source[0] as Element
     
@@ -126,30 +123,68 @@ public data class ParserDocument(public val source: Document) {
     }
     
     /**
-     * Looks for **any** occurrences inside of the [root] of an attribute that has a [nodeName][Element.getNodeName]
-     * that matches with any of the defined values inside of the [names] parameter, if any are found the [container]
-     * closure is applied to them *(sequentially)*, otherwise nothing happens.
+     * Loops through **all** of the attributes appended onto the [root] of this document, and calls the [container]
+     * closure on all of them.
      */
     @XmlMarker
-    public inline fun attributes(vararg names: String, container: ParserAttribute.() -> Unit) {
-        source.attributes.asSequence().filter { it.nodeName in names }.forEach {
-            ParserAttribute(this, it as Attr, root).apply(container)
+    public inline fun attributes(container: ParserAttributes.() -> Unit) {
+        val tempSet = HashSet<Attr>()
+    
+        source.attributes.forEach {
+            tempSet += this as Attr
         }
+    
+        ParserAttributes(
+            this,
+            root,
+            tempSet.associateBy({ it.nodeName }, { it.nodeValue }),
+            tempSet.associateBy({ it.nodeName }, { it })
+        ).apply(container)
+    }
+    
+    /**
+     * Looks for **any** occurrences inside of the [root] of an attribute that has a [nodeName][Element.getNodeName]
+     * that matches with any of the defined values inside of the [names] parameter, if any are found the [container]
+     * closure is applied to them, otherwise nothing happens.
+     */
+    @XmlMarker
+    public inline fun attributes(vararg names: String, container: ParserAttributes.() -> Unit) {
+        val tempSet = HashSet<Attr>()
+    
+        source.attributes.asSequence().filter { it.nodeName in names }.forEach {
+            tempSet += it as Attr
+        }
+    
+        ParserAttributes(
+            this,
+            root,
+            tempSet.associateBy({ it.nodeName }, { it.nodeValue }),
+            tempSet.associateBy({ it.nodeName }, { it })
+        ).apply(container)
     }
     
     /**
      * Looks for **any** occurrences inside of the [root] of an attribute that has a
      * [nodeName][Attr.getNodeName] that matches with the [Pair.first] property, and a [nodeValue][Attr.getNodeValue]
-     * that matches with [Pair.second], if any are found the [container] closure is applied to them *(sequentially)*,
-     * otherwise nothing happens.
+     * that matches with [Pair.second], if any are found the [container] closure is applied to them, otherwise nothing
+     * happens.
      */
     @XmlMarker
-    public inline fun <V : Any> attributes(vararg attributes: Pair<String, V>, container: ParserAttribute.() -> Unit) {
+    public inline fun <V : Any> attributes(vararg attributes: Pair<String, V>, container: ParserAttributes.() -> Unit) {
+        val tempSet = HashSet<Attr>()
+        
         for ((name, value) in attributes) {
-            if (name in root.attributes && root.attributes[name].nodeValue == value.toString()) {
-                ParserAttribute(this, root.attributes[name] as Attr, root).apply(container)
+            if (name in source.attributes && source.attributes[name].nodeValue == value.toString()) {
+                tempSet += source.attributes[name] as Attr
             }
         }
+        
+        ParserAttributes(
+            this,
+            root,
+            tempSet.associateBy({ it.nodeName }, { it.nodeValue }),
+            tempSet.associateBy({ it.nodeName }, { it })
+        ).apply(container)
     }
     
 }
@@ -256,30 +291,68 @@ public data class ParserElement(
     }
     
     /**
-     * Looks for **any** occurrences inside of the [source] of an attribute that has a [nodeName][Element.getNodeName]
-     * that matches with any of the defined values inside of the [names] parameter, if any are found the [container]
-     * closure is applied to them *(sequentially)*, otherwise nothing happens.
+     * Loops through **all** of the attributes appended onto the [root] of this document, and calls the [container]
+     * closure on all of them.
      */
     @XmlMarker
-    public inline fun attributes(vararg names: String, container: ParserAttribute.() -> Unit) {
-        source.attributes.asSequence().filter { it.nodeName in names }.forEach {
-            ParserAttribute(document, it as Attr, source).apply(container)
+    public inline fun attributes(container: ParserAttributes.() -> Unit) {
+        val tempSet = HashSet<Attr>()
+        
+        source.attributes.forEach {
+            tempSet += this as Attr
         }
+        
+        ParserAttributes(
+            document,
+            source,
+            tempSet.associateBy({ it.nodeName }, { it.nodeValue }),
+            tempSet.associateBy({ it.nodeName }, { it })
+        ).apply(container)
+    }
+    
+    /**
+     * Looks for **any** occurrences inside of the [source] of an attribute that has a [nodeName][Element.getNodeName]
+     * that matches with any of the defined values inside of the [names] parameter, if any are found the [container]
+     * closure is applied to them, otherwise nothing happens.
+     */
+    @XmlMarker
+    public inline fun attributes(vararg names: String, container: ParserAttributes.() -> Unit) {
+        val tempSet = HashSet<Attr>()
+        
+        source.attributes.asSequence().filter { it.nodeName in names }.forEach {
+            tempSet += it as Attr
+        }
+        
+        ParserAttributes(
+            document,
+            source,
+            tempSet.associateBy({ it.nodeName }, { it.nodeValue }),
+            tempSet.associateBy({ it.nodeName }, { it })
+        ).apply(container)
     }
     
     /**
      * Looks for **any** occurrences inside of the [source] of an attribute that has a
      * [nodeName][Attr.getNodeName] that matches with the [Pair.first] property, and a [nodeValue][Attr.getNodeValue]
-     * that matches with [Pair.second], if any are found the [container] closure is applied to them *(sequentially)*,
-     * otherwise nothing happens.
+     * that matches with [Pair.second], if any are found the [container] closure is applied to them, otherwise nothing
+     * happens.
      */
     @XmlMarker
-    public inline fun <V : Any> attributes(vararg attributes: Pair<String, V>, container: ParserAttribute.() -> Unit) {
+    public inline fun <V : Any> attributes(vararg attributes: Pair<String, V>, container: ParserAttributes.() -> Unit) {
+        val tempSet = HashSet<Attr>()
+        
         for ((name, value) in attributes) {
             if (name in source.attributes && source.attributes[name].nodeValue == value.toString()) {
-                ParserAttribute(document, source.attributes[name] as Attr, source).apply(container)
+                tempSet += source.attributes[name] as Attr
             }
         }
+        
+        ParserAttributes(
+            document,
+            source,
+            tempSet.associateBy({ it.nodeName }, { it.nodeValue }),
+            tempSet.associateBy({ it.nodeName }, { it })
+        ).apply(container)
     }
     
     public override fun toString(): String {
@@ -304,6 +377,25 @@ public data class ParserAttribute(
     public val document: ParserDocument,
     public val source: Attr,
     public val parent: Element
+)
+
+/**
+ * A container for when working with multiple attributes, comes with two different HashMaps for easy access.
+ *
+ * @property document An instance of the over-arching [ParserDocument].
+ * @property parent The parent of this element.
+ * @property attributes Contains all the found attributes broken down into `nodeName:nodeValue`.
+ * @property _attributes Contains all the found attributes stored as `nodeName:attribute`.
+ *
+ * **Note:** If you do **not** need anything specific from the [Attr] instance, it's recommended to use the
+ * [attributes] over this one.
+ */
+@XmlMarker
+public data class ParserAttributes(
+    public val document: ParserDocument,
+    public val parent: Element,
+    public val attributes: Map<String, String>,
+    public val _attributes: Map<String, Attr>
 )
 
 /**
