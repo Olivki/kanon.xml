@@ -225,7 +225,7 @@ xml("root") {
         // This tells the generator to not include the 
         // "<?xml version="1.0" encoding="UTF-8" standalone="no"?>" 
         // that's normally included at the top of every XML output.
-        omitDeclartion = true
+        omitDeclaration = true
         omitEncoding = true
         
         // This tells the generator to use an indentation of 4 ' ' *(space)* characters
