@@ -99,3 +99,4 @@ fabric.properties
 .idea/httpRequests
 
 /src/test/kotlin/Test.kt
+/src/test/java/JavaTest.java

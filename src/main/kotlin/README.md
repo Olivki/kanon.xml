@@ -7,7 +7,7 @@
         - [Attributes](#attributes)
         - [TextNodes](#textnodes)
         - [Comments](#comments)
-        - [Transformer Scope](#transformer-scope)
+        - [Format Scope](#format-scope)
     - [Builder Example](#builder-example)
 - [XmlParser](#xmlparser)
     - [Start Parsing](#start-parsing)
@@ -208,31 +208,32 @@ xml("root") {
 </root>
 ```
 
-#### Transformer Scope
+#### Format Scope
 
-The transformer scope allows you to customize how to `Transformer` that's used to serialize the XML document works. (The `transformer` is used when you call either `toString()` or `saveTo(...)` on the document container.
+The format scope allows you to customize how the `Format` that's used to serialize the XML document works. *(The `outputFormat` property is used when you call either `toString()` or `saveTo(...)` on the document container.)*
 
-By default every document container has two properties set on creation:
+If this is never scoped into during the creation of the document, the `outputFormat` property will automatically be set to `Format.getPrettyFormat()` at the end of the `xml(...)` closure. *(This is a standard "pretty-print" style.)
 
-```yaml
-indent:"yes"
-{http://xml.apache.org/xslt}indent-amount:"2"
-```
-
-Which means that indentation is enabled *(aka pretty print)*, and that the indentation amount is set to 2 *(This means that for every increase of the indentation, it increases by 2.)*.
-
-Here's an example on how you could use the transformer scope:
+Here's an example on how you could use the format scope:
 
 ```kotlin
 xml("root") {
-    transformer {
-        // Closure Variant
-        // This tells the generator to not include the "<?xml version="1.0" encoding="UTF-8" standalone="no"?>" that's 
-        // normally included at the top of every XML output.
-        property(name = OutputKeys.OMIT_XML_DECLARATION) { "yes" }
-        // Function Variant
-        // This tells the generator to use an indentation of 4 rather than the default 2.
-        property(name = "{http://xml.apache.org/xslt}indent-amount", value = "4")
+    // You can also just call 'format {' without the format, by default it is set to 
+    // Format.getPrettFormat(), and it's what determines what format you'll be editing
+    // inside of the scope.
+    format(Format.getPrettyFormat()) {
+        // This tells the generator to not include the 
+        // "<?xml version="1.0" encoding="UTF-8" standalone="no"?>" 
+        // that's normally included at the top of every XML output.
+        omitDeclaration = true
+        omitEncoding = true
+        
+        // This tells the generator to use an indentation of 4 ' ' *(space)* characters
+        // rather than the default that's 2 space characters.
+        indent = "    "
+        
+        // For more information, I'd recommend reading the documentation in the 'Format' class
+        // from jdom2.
     }
             
     element("element") {
@@ -395,16 +396,16 @@ Suppose we want to serialize the contents of the `people` document we made in th
 ```kotlin
 // We're assuming that you saved the generated XML document to the directory "foo/bar/" under
 // the name "document.xml".
-val document: Path = KPath("foo", "bar", "document.xml")
+val document: Path = Paths.get("foo", "bar", "document.xml")
 val people = ArrayList<Person>()
         
 document.parseAsDocument {
     elements("person") {
         people += Person(
-            source["name"].textContent,
-            Gender.valueOf(source["gender"].textContent),
-            source["age"].textContent.toInt(),
-            source["occupation"].textContent
+            source.getChildText("name"),
+            Gender.valueOf(source.getChildText("gender")),
+            source.getChildText("age").toInt(),
+            source.getChildText("occupation")
         )
     }
 }
@@ -425,17 +426,17 @@ Person(name=SCP-049, gender=MALE, age=2462, occupation=Plauge Doctor)]
 ```kotlin
 // We're assuming that you saved the generated XML document to the directory "foo/bar/" under
 // the name "document.xml".
-val document: Path = KPath("foo", "bar", "document.xml")
+val document: Path = Paths.get("foo", "bar", "document.xml")
 val people = ArrayList<Person>()
         
 document.parseAsDocument {
     elements("person") {
         attributes {
             people += Person(
-                attributes["name"]!!, // Putting the !! on the get operator is actually bad practice, but eh.
-                Gender.valueOf(attributes["gender"]!!),
-                attributes["age"]!!.toInt(),
-                attributes["occupation"]!!
+                attributes.getValue("name"),
+                Gender.valueOf(attributes.getValue("gender")),
+                attributes.getValue("age").toInt(),
+                attributes.getValue("occupation")
             )
         }
     }
@@ -452,6 +453,61 @@ Person(name=Hazuki Kanon, gender=FEMALE, age=16, occupation=High School Student)
 Person(name=SCP-049, gender=MALE, age=2462, occupation=Plauge Doctor)]
 
 ```
+
+**Using XPath**
+kanon.xml v2.0.0 comes with a new underlying engine, which is JDom, and with that, support for [XPath](https://www.w3schools.com/xml/xml_xpath.asp) has been added for the parser.
+
+Suppose you have a XML document that's deeply nested;
+
+````kotlin
+xml("root") {
+	element("one") {
+		element("two") {
+			element("three") {
+				element("four") {
+					element("five") {
+						element("six") {
+							text("treasure") { "You've found the deep sea treasure." }
+						}
+					}
+				}
+			}
+		}
+	}
+}.document
+````
+
+And all you want is the last element in the chain, sure, you could write DSL to manually go that deep;
+
+````kotlin
+document.parse {
+    element("one") {
+        element("two") {
+            element("three") {
+                element("four") {
+                    element("five") {
+                        element("six") {
+                            println(source.getChildText("treasure")) // output: You've found the deep sea treasure.
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+````
+
+But that quickly gets cluttered, and certainly doesn't look good, and that's where XPath comes in. With XPath, the above code can be replaced with just;
+
+````kotlin
+document.parse {
+    elements("//treasure".compile()) {
+        println(source.text)
+    }
+}
+````
+
+Currently you can use an xpath expression on the following closures; `element(...)`, `elements(...)`, `attribute(...)` and `attributes(...)`. For more info about XPath, W3School has  a decent entry regarding it, [link here](https://www.w3schools.com/xml/xml_xpath.asp).
 
 ## Footnotes
 
