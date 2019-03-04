@@ -19,21 +19,19 @@
 
 package moe.kanon.xml
 
-import moe.kanon.kextensions.dom.*
-import moe.kanon.kextensions.io.newInputStream
-import org.w3c.dom.Attr
-import org.w3c.dom.Document
-import org.w3c.dom.Element
-import org.w3c.dom.Node
+import org.jdom2.Attribute
+import org.jdom2.Document
+import org.jdom2.Element
+import org.jdom2.input.SAXBuilder
+import org.jdom2.input.sax.XMLReaders
+import org.jdom2.output.Format
+import org.jdom2.output.XMLOutputter
+import org.jdom2.xpath.XPathExpression
+import org.jdom2.xpath.XPathFactory
+import java.io.File
 import java.io.InputStream
-import java.io.StringWriter
+import java.net.URL
 import java.nio.file.Path
-import javax.xml.parsers.DocumentBuilderFactory
-import javax.xml.transform.OutputKeys
-import javax.xml.transform.Transformer
-import javax.xml.transform.TransformerFactory
-import javax.xml.transform.dom.DOMSource
-import javax.xml.transform.stream.StreamResult
 
 
 /**
@@ -47,79 +45,155 @@ public data class ParserDocument(public val source: Document) {
     /**
      * The root element of this document.
      */
-    public val root: Element = source.documentElement // source[0] as Element
-    
-    @PublishedApi internal val sequence: Sequence<Node> = root.childNodes.asSequence()
+    public val root: Element = source.rootElement // source[0] as Element
     
     /**
      * Looks for exactly **one** occurrence inside of the [root] of an element that has a
-     * [nodeName][Element.getNodeName] that matches with the [tagName] parameter, if one is found the [container]
+     * [nodeName][Element.name] that matches with the [tagName] parameter, if one is found the [container]
      * closure is applied to it, otherwise nothing happens.
      */
     @XmlMarker
-    public inline fun element(tagName: String, container: ParserElement.() -> Unit) {
-        if (tagName in root && root[tagName] is Element) {
-            ParserElement(this, root[root.childNodes.indexOf(tagName)] as Element, root).apply(container)
+    public inline fun element(tagName: String, container: ParserElement.() -> Unit): ParserDocument {
+        if (root.getChild(tagName) != null) {
+            ParserElement(this, root.getChild(tagName), root).apply(container)
         }
+        
+        return this
+    }
+    
+    /**
+     * Invokes the *first* result of the specified [expression] on the specified [container], if none is found, nothing
+     * will happen.
+     */
+    @XmlMarker
+    public inline fun element(
+        expression: XPathExpression<Element>,
+        container: ParserElement.() -> Unit
+    ): ParserDocument {
+        val first = expression.evaluate(root).firstOrNull()
+        if (first != null) {
+            ParserElement(this, first, root).apply(container)
+        }
+        
+        return this
+    }
+    
+    /**
+     * Invokes all the results of the specified [expression] on the specified [container], if none is found, nothing
+     * will happen.
+     */
+    @XmlMarker
+    public inline fun elements(
+        expression: XPathExpression<Element>,
+        container: ParserElement.() -> Unit
+    ): ParserDocument {
+        for (element in expression.evaluate(root)) ParserElement(this, element, root).apply(container)
+        
+        return this
     }
     
     /**
      * Calls the [container] closure on **every** occurrence of a child node inside of the [root] that is an [Element].
      */
     @XmlMarker
-    public inline fun elements(container: ParserElement.() -> Unit) {
-        sequence.filter { it is Element }.forEach {
-            ParserElement(this, it as Element, root).apply(container)
+    public inline fun elements(container: ParserElement.() -> Unit): ParserDocument {
+        for (element in root.children) {
+            ParserElement(this, element, root).apply(container)
         }
+        
+        return this
     }
     
     /**
-     * Looks for **any** occurrences inside of the [root] of an element that has a [nodeName][Element.getNodeName] that
+     * Looks for **any** occurrences inside of the [root] of an element that has a [nodeName][Element.name] that
      * matches with the [tagName] parameter, if any are found the [container] closure is applied to them
      * *(sequentially)*, otherwise nothing happens.
      */
     @XmlMarker
-    public inline fun elements(tagName: String, container: ParserElement.() -> Unit) {
-        sequence.filter { it is Element && it.nodeName == tagName }.forEach {
-            ParserElement(this, it as Element, root).apply(container)
+    public inline fun elements(tagName: String, container: ParserElement.() -> Unit): ParserDocument {
+        for (element in root.children.filter { it.name == tagName }) {
+            ParserElement(this, element, root).apply(container)
         }
+        
+        return this
     }
     
     /**
-     * Looks for **any** occurrences inside of the [root] of an element that has a [nodeName][Element.getNodeName] that
+     * Looks for **any** occurrences inside of the [root] of an element that has a [nodeName][Element.name] that
      * matches with any of the defined values inside of the [tagNames] parameter, if any are found the [container]
      * closure is applied to them *(sequentially)*
      */
     @XmlMarker
-    public inline fun elements(vararg tagNames: String, container: ParserElement.() -> Unit) {
-        sequence.filter { it is Element && it.nodeName in tagNames }.forEach {
-            ParserElement(this, it as Element, root).apply(container)
+    public inline fun elements(vararg tagNames: String, container: ParserElement.() -> Unit): ParserDocument {
+        for (element in root.children.filter { it.name in tagNames }) {
+            ParserElement(this, element, root).apply(container)
         }
+        
+        return this
+    }
+    
+    /**
+     * Looks for exactly **one** occurrence inside of the [root] of an attribute that has a [nodeName][Attribute.name]
+     * that matches with the [name] parameter, if one is found the [container] closure is applied to it, otherwise
+     * nothing happens.
+     */
+    @XmlMarker
+    public inline fun attribute(name: String, container: ParserAttribute.() -> Unit): ParserDocument {
+        if (root.attributes.any { it.name == name }) ParserAttribute(this, root.getAttribute(name), root).apply(
+            container
+        )
+        
+        return this
     }
     
     /**
      * Looks for exactly **one** occurrence inside of the [root] of an attribute that has a
-     * [nodeName][Attr.getNodeName] that matches with the [name] parameter, if one is found the [container]
-     * closure is applied to it, otherwise nothing happens.
+     * [nodeName][Attribute.name] that matches with the [Pair.first] property, and a [nodeValue][Attribute.name] that
+     * matches with [Pair.second], if one is found the [container] closure is applied to it, otherwise nothing happens.
      */
     @XmlMarker
-    public inline fun attribute(name: String, container: ParserAttribute.() -> Unit) {
-        if (name in root.attributes) {
-            ParserAttribute(this, root.attributes[name] as Attr, root).apply(container)
-        }
-    }
-    
-    /**
-     * Looks for exactly **one** occurrence inside of the [root] of an attribute that has a
-     * [nodeName][Attr.getNodeName] that matches with the [Pair.first] property, and a [nodeValue][Attr.getNodeValue]
-     * that matches with [Pair.second], if one is found the [container] closure is applied to it, otherwise nothing happens.
-     */
-    @XmlMarker
-    public inline fun <V : Any> attribute(attribute: Pair<String, V>, container: ParserAttribute.() -> Unit) {
+    public inline fun <V : Any> attribute(
+        attribute: Pair<String, V>,
+        container: ParserAttribute.() -> Unit
+    ): ParserDocument {
         val (name, value) = attribute
-        if (name in root.attributes && root.attributes[name].nodeValue == value.toString()) {
-            ParserAttribute(this, root.attributes[name] as Attr, root).apply(container)
+        
+        if (root.attributes.any { it.name == name } && root.getAttribute(name).value == value.toString()) {
+            ParserAttribute(this, root.getAttribute(name), root).apply(container)
         }
+        
+        return this
+    }
+    
+    /**
+     * Invokes the *first* result of the specified [expression] on the specified [container], if none is found, nothing
+     * will happen.
+     */
+    @XmlMarker
+    public inline fun attribute(
+        expression: XPathExpression<Attribute>,
+        container: ParserAttribute.() -> Unit
+    ): ParserDocument {
+        val first = expression.evaluate(root).firstOrNull()
+        if (first != null) {
+            ParserAttribute(this, first, root).apply(container)
+        }
+        
+        return this
+    }
+    
+    /**
+     * Invokes all the results of the specified [expression] on the specified [container], if none is found, nothing
+     * will happen.
+     */
+    @XmlMarker
+    public inline fun attributes(
+        expression: XPathExpression<Attribute>,
+        container: ParserAttribute.() -> Unit
+    ): ParserDocument {
+        for (element in expression.evaluate(root)) ParserAttribute(this, element, root).apply(container)
+        
+        return this
     }
     
     /**
@@ -127,64 +201,58 @@ public data class ParserDocument(public val source: Document) {
      * closure on all of them.
      */
     @XmlMarker
-    public inline fun attributes(container: ParserAttributes.() -> Unit) {
-        val tempSet = HashSet<Attr>()
-    
-        source.attributes.forEach {
-            tempSet += this as Attr
-        }
-    
+    public inline fun attributes(container: ParserAttributes.() -> Unit): ParserDocument {
         ParserAttributes(
             this,
             root,
-            tempSet.associateBy({ it.nodeName }, { it.nodeValue }),
-            tempSet.associateBy({ it.nodeName }, { it })
+            root.attributes.associateBy({ it.name }, { it.value }),
+            root.attributes.associateBy({ it.name }, { it })
         ).apply(container)
+        
+        return this
     }
     
     /**
-     * Looks for **any** occurrences inside of the [root] of an attribute that has a [nodeName][Element.getNodeName]
-     * that matches with any of the defined values inside of the [names] parameter, if any are found the [container]
+     * Looks for **any** occurrences inside of the [root] of an attribute that has a [nodeName][Element.name] that
+     * matches with any of the defined values inside of the [names] parameter, if any are found the [container]
      * closure is applied to them, otherwise nothing happens.
      */
     @XmlMarker
-    public inline fun attributes(vararg names: String, container: ParserAttributes.() -> Unit) {
-        val tempSet = HashSet<Attr>()
-    
-        source.attributes.asSequence().filter { it.nodeName in names }.forEach {
-            tempSet += it as Attr
-        }
-    
+    public inline fun attributes(vararg names: String, container: ParserAttributes.() -> Unit): ParserDocument {
+        val foundAttributes = root.attributes.filter { it.name in names }
+        
         ParserAttributes(
             this,
             root,
-            tempSet.associateBy({ it.nodeName }, { it.nodeValue }),
-            tempSet.associateBy({ it.nodeName }, { it })
+            foundAttributes.associateBy({ it.name }, { it.value }),
+            foundAttributes.associateBy({ it.name }, { it })
         ).apply(container)
+        
+        return this
     }
     
     /**
-     * Looks for **any** occurrences inside of the [root] of an attribute that has a
-     * [nodeName][Attr.getNodeName] that matches with the [Pair.first] property, and a [nodeValue][Attr.getNodeValue]
-     * that matches with [Pair.second], if any are found the [container] closure is applied to them, otherwise nothing
-     * happens.
+     * Looks for **any** occurrences inside of the [root] of an attribute that has a [nodeName][Attribute.name] that
+     * matches with the [Pair.first] property, and a [nodeValue][Attribute.name] that matches with [Pair.second], if
+     * any are found the [container] closure is applied to them, otherwise nothing happens.
      */
     @XmlMarker
-    public inline fun <V : Any> attributes(vararg attributes: Pair<String, V>, container: ParserAttributes.() -> Unit) {
-        val tempSet = HashSet<Attr>()
-        
-        for ((name, value) in attributes) {
-            if (name in source.attributes && source.attributes[name].nodeValue == value.toString()) {
-                tempSet += source.attributes[name] as Attr
-            }
-        }
+    public inline fun <V : Any> attributes(
+        vararg attributes: Pair<String, V>,
+        container: ParserAttributes.() -> Unit
+    ): ParserDocument {
+        val foundAttributes = attributes.filter { (name, value) ->
+            root.attributes.any { it.name == name } && root.getAttribute(name).value == value.toString()
+        }.map { (name) -> root.getAttribute(name) }
         
         ParserAttributes(
             this,
             root,
-            tempSet.associateBy({ it.nodeName }, { it.nodeValue }),
-            tempSet.associateBy({ it.nodeName }, { it })
+            foundAttributes.associateBy({ it.name }, { it.value }),
+            foundAttributes.associateBy({ it.name }, { it })
         ).apply(container)
+        
+        return this
     }
     
 }
@@ -203,30 +271,48 @@ public data class ParserElement(
     public val parent: Element
 ) {
     /**
-     * The [Transformer] instance this element uses to serialize itself.
-     */
-    public val transformer: Transformer by lazy {
-        val trans = TransformerFactory.newInstance().newTransformer()
-        
-        trans.setOutputProperty(OutputKeys.INDENT, "yes")
-        trans.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2")
-        trans.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes")
-        
-        trans
-    }
-    
-    @PublishedApi internal val sequence: Sequence<Node> = source.childNodes.asSequence()
-    
-    /**
-     * Looks for exactly **one** occurrence inside of the [source] of an element that has a
-     * [nodeName][Element.getNodeName] that matches with the [tagName] parameter, if one is found the [container]
-     * closure is applied to it, otherwise nothing happens.
+     * Looks for exactly **one** occurrence inside of the [source] of an element that has a [nodeName][Element.name]
+     * that matches with the [tagName] parameter, if one is found the [container] closure is applied to it, otherwise
+     * nothing happens.
      */
     @XmlMarker
-    public inline fun element(tagName: String, container: ParserElement.() -> Unit) {
-        if (tagName in source && source[tagName] is Element) {
-            ParserElement(document, source[tagName] as Element, source).apply(container)
+    public inline fun element(tagName: String, container: ParserElement.() -> Unit): ParserElement {
+        if (source.getChild(tagName) != null) {
+            ParserElement(document, source.getChild(tagName), source).apply(container)
         }
+        
+        return this
+    }
+    
+    /**
+     * Invokes the *first* result of the specified [expression] on the specified [container], if none is found, nothing
+     * will happen.
+     */
+    @XmlMarker
+    public inline fun element(
+        expression: XPathExpression<Element>,
+        container: ParserElement.() -> Unit
+    ): ParserElement {
+        val first = expression.evaluate(source).firstOrNull()
+        if (first != null) {
+            ParserElement(document, first, source).apply(container)
+        }
+        
+        return this
+    }
+    
+    /**
+     * Invokes all the results of the specified [expression] on the specified [container], if none is found, nothing
+     * will happen.
+     */
+    @XmlMarker
+    public inline fun elements(
+        expression: XPathExpression<Element>,
+        container: ParserElement.() -> Unit
+    ): ParserElement {
+        for (element in expression.evaluate(source)) ParserElement(document, element, source).apply(container)
+        
+        return this
     }
     
     /**
@@ -234,60 +320,105 @@ public data class ParserElement(
      * [Element].
      */
     @XmlMarker
-    public inline fun elements(container: ParserElement.() -> Unit) {
-        sequence.filter { it is Element }.forEach {
-            ParserElement(document, it as Element, source).apply(container)
+    public inline fun elements(container: ParserElement.() -> Unit): ParserElement {
+        for (element in source.children) {
+            ParserElement(document, element, source).apply(container)
         }
+        
+        return this
     }
     
     /**
-     * Looks for **any** occurrences inside of the [source] of an element that has a [nodeName][Element.getNodeName]
-     * that matches with the [tagName] parameter, if any are found the [container] closure is applied to them
+     * Looks for **any** occurrences inside of the [source] of an element that has a [nodeName][Element.name] that
+     * matches with the [tagName] parameter, if any are found the [container] closure is applied to them
      * *(sequentially)*, otherwise nothing happens.
      */
     @XmlMarker
-    public inline fun elements(tagName: String, container: ParserElement.() -> Unit) {
-        sequence.filter { it is Element && it.nodeName == tagName }.forEach {
-            ParserElement(document, it as Element, source).apply(container)
+    public inline fun elements(tagName: String, container: ParserElement.() -> Unit): ParserElement {
+        for (element in source.children.filter { it.name == tagName }) {
+            ParserElement(document, element, source).apply(container)
         }
+        
+        return this
     }
     
     /**
-     * Looks for **any** occurrences inside of the [source] of an element that has a [nodeName][Element.getNodeName]
-     * that matches with any of the defined values inside of the [tagNames] parameter, if any are found the [container]
+     * Looks for **any** occurrences inside of the [source] of an element that has a [nodeName][Element.name] that
+     * matches with any of the defined values inside of the [tagNames] parameter, if any are found the [container]
      * closure is applied to them *(sequentially)*
      */
     @XmlMarker
-    public inline fun elements(vararg tagNames: String, container: ParserElement.() -> Unit) {
-        sequence.filter { it is Element && it.nodeName in tagNames }.forEach {
-            ParserElement(document, it as Element, source).apply(container)
+    public inline fun elements(vararg tagNames: String, container: ParserElement.() -> Unit): ParserElement {
+        for (element in source.children.filter { it.name in tagNames }) {
+            ParserElement(document, element, source).apply(container)
         }
+        
+        return this
     }
     
     /**
      * Looks for exactly **one** occurrence inside of the [source] of an attribute that has a
-     * [nodeName][Attr.getNodeName] that matches with the [name] parameter, if one is found the [container]
-     * closure is applied to it, otherwise nothing happens.
+     * [nodeName][Attribute.name] that matches with the [name] parameter, if one is found the [container] closure is
+     * applied to it, otherwise nothing happens.
      */
     @XmlMarker
-    public inline fun attribute(name: String, container: ParserAttribute.() -> Unit) {
-        if (name in source.attributes) {
-            ParserAttribute(document, source.attributes[name] as Attr, source).apply(container)
+    public inline fun attribute(name: String, container: ParserAttribute.() -> Unit): ParserElement {
+        if (source.attributes.any { it.name == name }) {
+            ParserAttribute(document, source.getAttribute(name), source).apply(container)
         }
+        
+        return this
     }
     
     /**
      * Looks for exactly **one** occurrence inside of the [source] of an attribute that has a
-     * [nodeName][Attr.getNodeName] that matches with the [Pair.first] property, and a [nodeValue][Attr.getNodeValue]
+     * [nodeName][Attribute.name] that matches with the [Pair.first] property, and a [nodeValue][Attribute.value]
      * that matches with [Pair.second], if one is found the [container] closure is applied to it, otherwise nothing
      * happens.
      */
     @XmlMarker
-    public inline fun <V : Any> attribute(attribute: Pair<String, V>, container: ParserAttribute.() -> Unit) {
+    public inline fun <V : Any> attribute(
+        attribute: Pair<String, V>,
+        container: ParserAttribute.() -> Unit
+    ): ParserElement {
         val (name, value) = attribute
-        if (name in source.attributes && source.attributes[name].nodeValue == value.toString()) {
-            ParserAttribute(document, source.attributes[name] as Attr, source).apply(container)
+        
+        if (source.attributes.any { it.name == name } && source.getAttribute(name).value == value.toString()) {
+            ParserAttribute(document, source.getAttribute(name), source).apply(container)
         }
+        
+        return this
+    }
+    
+    /**
+     * Invokes the *first* result of the specified [expression] on the specified [container], if none is found, nothing
+     * will happen.
+     */
+    @XmlMarker
+    public inline fun attribute(
+        expression: XPathExpression<Attribute>,
+        container: ParserAttribute.() -> Unit
+    ): ParserElement {
+        val first = expression.evaluate(source).firstOrNull()
+        if (first != null) {
+            ParserAttribute(document, first, source).apply(container)
+        }
+        
+        return this
+    }
+    
+    /**
+     * Invokes all the results of the specified [expression] on the specified [container], if none is found, nothing
+     * will happen.
+     */
+    @XmlMarker
+    public inline fun attributes(
+        expression: XPathExpression<Attribute>,
+        container: ParserAttribute.() -> Unit
+    ): ParserElement {
+        for (element in expression.evaluate(source)) ParserAttribute(document, element, source).apply(container)
+        
+        return this
     }
     
     /**
@@ -295,87 +426,76 @@ public data class ParserElement(
      * closure on all of them.
      */
     @XmlMarker
-    public inline fun attributes(container: ParserAttributes.() -> Unit) {
-        val tempSet = HashSet<Attr>()
-        
-        source.attributes.forEach {
-            tempSet += this as Attr
-        }
-        
+    public inline fun attributes(container: ParserAttributes.() -> Unit): ParserElement {
         ParserAttributes(
             document,
             source,
-            tempSet.associateBy({ it.nodeName }, { it.nodeValue }),
-            tempSet.associateBy({ it.nodeName }, { it })
+            source.attributes.associateBy({ it.name }, { it.value }),
+            source.attributes.associateBy({ it.name }, { it })
         ).apply(container)
+        
+        return this
     }
     
     /**
-     * Looks for **any** occurrences inside of the [source] of an attribute that has a [nodeName][Element.getNodeName]
-     * that matches with any of the defined values inside of the [names] parameter, if any are found the [container]
-     * closure is applied to them, otherwise nothing happens.
+     * Looks for **any** occurrences inside of the [source] of an attribute that has a [nodeName][Element.name] that
+     * matches with any of the defined values inside of the [names] parameter, if any are found the [container] closure
+     * is applied to them, otherwise nothing happens.
      */
     @XmlMarker
-    public inline fun attributes(vararg names: String, container: ParserAttributes.() -> Unit) {
-        val tempSet = HashSet<Attr>()
-        
-        source.attributes.asSequence().filter { it.nodeName in names }.forEach {
-            tempSet += it as Attr
-        }
+    public inline fun attributes(vararg names: String, container: ParserAttributes.() -> Unit): ParserElement {
+        val foundAttributes = source.attributes.filter { it.name in names }
         
         ParserAttributes(
             document,
             source,
-            tempSet.associateBy({ it.nodeName }, { it.nodeValue }),
-            tempSet.associateBy({ it.nodeName }, { it })
+            foundAttributes.associateBy({ it.name }, { it.value }),
+            foundAttributes.associateBy({ it.name }, { it })
         ).apply(container)
+        
+        return this
     }
     
     /**
      * Looks for **any** occurrences inside of the [source] of an attribute that has a
-     * [nodeName][Attr.getNodeName] that matches with the [Pair.first] property, and a [nodeValue][Attr.getNodeValue]
-     * that matches with [Pair.second], if any are found the [container] closure is applied to them, otherwise nothing
+     * [nodeName][Attribute.value] that matches with the [Pair.first] property, and a [nodeValue][Attribute.value] that
+     * matches with [Pair.second], if any are found the [container] closure is applied to them, otherwise nothing
      * happens.
      */
     @XmlMarker
-    public inline fun <V : Any> attributes(vararg attributes: Pair<String, V>, container: ParserAttributes.() -> Unit) {
-        val tempSet = HashSet<Attr>()
-        
-        for ((name, value) in attributes) {
-            if (name in source.attributes && source.attributes[name].nodeValue == value.toString()) {
-                tempSet += source.attributes[name] as Attr
-            }
-        }
+    public inline fun <V : Any> attributes(
+        vararg attributes: Pair<String, V>,
+        container: ParserAttributes.() -> Unit
+    ): ParserElement {
+        val foundAttributes = attributes.filter { (name, value) ->
+            source.attributes.any { it.name == name } && source.getAttribute(name).value == value.toString()
+        }.map { (name) -> source.getAttribute(name) }
         
         ParserAttributes(
             document,
             source,
-            tempSet.associateBy({ it.nodeName }, { it.nodeValue }),
-            tempSet.associateBy({ it.nodeName }, { it })
+            foundAttributes.associateBy({ it.name }, { it.value }),
+            foundAttributes.associateBy({ it.name }, { it })
         ).apply(container)
+        
+        return this
     }
     
-    public override fun toString(): String {
-        val source = DOMSource(source)
-        
-        val writer = StringWriter()
-        transformer.transform(source, StreamResult(writer))
-        
-        return writer.buffer.toString()
-    }
+    public override fun toString(): String =
+        XMLOutputter(Format.getPrettyFormat().setOmitDeclaration(true).setOmitEncoding(true)).outputString(source)
 }
 
 /**
- * An empty container for working on [Attr] instances retrieved from either [ParserDocument] or [ParserElement].
+ * An empty container for working on [Attribute] instances retrieved from either [ParserDocument] or [ParserElement].
  *
  * @property document An instance of the over-arching [ParserDocument].
- * @property source The [Attr] instance that this container is wrapping around.
+ * @property source The [Attribute] instance that this container is wrapping around.
  * @property parent The parent of this element.
  */
 @XmlMarker
 public data class ParserAttribute(
     public val document: ParserDocument,
-    public val source: Attr,
+    public val source: Attribute,
     public val parent: Element
 )
 
@@ -385,17 +505,17 @@ public data class ParserAttribute(
  * @property document An instance of the over-arching [ParserDocument].
  * @property parent The parent of this element.
  * @property attributes Contains all the found attributes broken down into `nodeName:nodeValue`.
- * @property _attributes Contains all the found attributes stored as `nodeName:attribute`.
+ * @property attributeMap Contains all the found attributes stored as `nodeName:attribute`.
  *
- * **Note:** If you do **not** need anything specific from the [Attr] instance, it's recommended to use the
- * [attributes] over this one.
+ * If you do **not** need anything specific from the [Attribute] instance, it's recommended to use the
+ * [attributes] property over this one.
  */
 @XmlMarker
 public data class ParserAttributes(
     public val document: ParserDocument,
     public val parent: Element,
     public val attributes: Map<String, String>,
-    public val _attributes: Map<String, Attr>
+    public val attributeMap: Map<String, Attribute>
 )
 
 /**
@@ -405,26 +525,132 @@ public inline fun Document.parse(container: ParserDocument.() -> Unit): ParserDo
     ParserDocument(this).apply(container)
 
 /**
- * Attempts to parse this file into a [Document], and then wrap a [ParserDocument] around the document and then
- * return the container.
+ * Attempts to parse `this` [file][Path] into a [Document] using [SAXBuilder] and the specified [validator], and then
+ * wrap a [ParserDocument] around the document and return the resulting container.
+ *
+ * @receiver the [file][Path] to parse as a document.
+ *
+ * @param [validator] What to use to validate the document when parsing it.
+ *
+ * ([DTDVALIDATING][XMLReaders.DTDVALIDATING] by default.)
+ * @param [features] A map containing user set features, the entries will be invoked on the [SAXBuilder.setFeature]
+ * function.
+ *
+ * ([emptyMap] by default.)
+ * @param [properties] A map containing user set properties, the entries will be invoked on the
+ * [SAXBuilder.setProperty] function.
+ *
+ * ([emptyMap] by default.)
  */
-public inline fun Path.parseAsDocument(container: ParserDocument.() -> Unit): ParserDocument {
-    val inputStream = this.newInputStream()
-    val factory = DocumentBuilderFactory.newInstance()
-    factory.isNamespaceAware = true
-    factory.isIgnoringComments = true
-    factory.isIgnoringElementContentWhitespace = true
-    return ParserDocument(factory.newDocumentBuilder().parse(inputStream)).apply(container)
+@JvmOverloads
+public inline fun Path.parseAsDocument(
+    validator: XMLReaders = XMLReaders.DTDVALIDATING,
+    features: Map<String, Boolean> = emptyMap(),
+    properties: Map<String, Any> = emptyMap(),
+    container: ParserDocument.() -> Unit
+): ParserDocument {
+    val builder = SAXBuilder(validator)
+    for ((key, bool) in features) builder.setFeature(key, bool)
+    for ((key, obj) in properties) builder.setProperty(key, obj)
+    return ParserDocument(builder.build(this.toFile())).apply(container)
 }
 
 /**
- * Attempts to parse this input stream into a [Document], and then wrap a [ParserDocument] around the document and then
- * return the container.
+ * Attempts to parse `this` [file][File] into a [Document] using [SAXBuilder] and the specified [validator], and then
+ * wrap a [ParserDocument] around the document and return the resulting container.
+ *
+ * @receiver the [file][File] to parse as a document.
+ *
+ * @param [validator] What to use to validate the document when parsing it.
+ *
+ * ([DTDVALIDATING][XMLReaders.DTDVALIDATING] by default.)
+ * @param [features] A map containing user set features, the entries will be invoked on the [SAXBuilder.setFeature]
+ * function.
+ *
+ * ([emptyMap] by default.)
+ * @param [properties] A map containing user set properties, the entries will be invoked on the
+ * [SAXBuilder.setProperty] function.
+ *
+ * ([emptyMap] by default.)
  */
-public inline fun InputStream.parseAsDocument(container: ParserDocument.() -> Unit): ParserDocument {
-    val factory = DocumentBuilderFactory.newInstance()
-    factory.isNamespaceAware = true
-    factory.isIgnoringComments = true
-    factory.isIgnoringElementContentWhitespace = true
-    return ParserDocument(factory.newDocumentBuilder().parse(this)).apply(container)
+@JvmOverloads
+public inline fun File.parseAsDocument(
+    validator: XMLReaders = XMLReaders.DTDVALIDATING,
+    features: Map<String, Boolean> = emptyMap(),
+    properties: Map<String, Any> = emptyMap(),
+    container: ParserDocument.() -> Unit
+): ParserDocument {
+    val builder = SAXBuilder(validator)
+    for ((key, bool) in features) builder.setFeature(key, bool)
+    for ((key, obj) in properties) builder.setProperty(key, obj)
+    return ParserDocument(builder.build(this)).apply(container)
 }
+
+/**
+ * Attempts to parse `this` input-stream into a [Document] using [SAXBuilder] and the specified [validator], and then
+ * wrap a [ParserDocument] around the document and return the resulting container.
+ *
+ * @receiver the [input-stream][InputStream] to parse as a document.
+ *
+ * @param [validator] What to use to validate the document when parsing it.
+ *
+ * ([DTDVALIDATING][XMLReaders.DTDVALIDATING] by default.)
+ * @param [features] A map containing user set features, the entries will be invoked on the [SAXBuilder.setFeature]
+ * function.
+ *
+ * ([emptyMap] by default.)
+ * @param [properties] A map containing user set properties, the entries will be invoked on the
+ * [SAXBuilder.setProperty] function.
+ *
+ * ([emptyMap] by default.)
+ */
+@JvmOverloads
+public inline fun InputStream.parseAsDocument(
+    validator: XMLReaders = XMLReaders.DTDVALIDATING,
+    features: Map<String, Boolean> = emptyMap(),
+    properties: Map<String, Any> = emptyMap(),
+    container: ParserDocument.() -> Unit
+): ParserDocument {
+    val builder = SAXBuilder(validator)
+    for ((key, bool) in features) builder.setFeature(key, bool)
+    for ((key, obj) in properties) builder.setProperty(key, obj)
+    return ParserDocument(builder.build(this)).apply(container)
+}
+
+/**
+ * Attempts to parse `this` URL into a [Document] using [SAXBuilder] and the specified [validator], and then
+ * wrap a [ParserDocument] around the document and return the resulting container.
+ *
+ * @receiver the [input-stream][InputStream] to parse as a document.
+ *
+ * @param [validator] What to use to validate the document when parsing it.
+ *
+ * ([DTDVALIDATING][XMLReaders.DTDVALIDATING] by default.)
+ * @param [features] A map containing user set features, the entries will be invoked on the [SAXBuilder.setFeature]
+ * function.
+ *
+ * ([emptyMap] by default.)
+ * @param [properties] A map containing user set properties, the entries will be invoked on the
+ * [SAXBuilder.setProperty] function.
+ *
+ * ([emptyMap] by default.)
+ */
+@JvmOverloads
+public inline fun URL.parseAsDocument(
+    validator: XMLReaders = XMLReaders.DTDVALIDATING,
+    features: Map<String, Boolean> = emptyMap(),
+    properties: Map<String, Any> = emptyMap(),
+    container: ParserDocument.() -> Unit
+): ParserDocument {
+    val builder = SAXBuilder(validator)
+    for ((key, bool) in features) builder.setFeature(key, bool)
+    for ((key, obj) in properties) builder.setProperty(key, obj)
+    return ParserDocument(builder.build(this)).apply(container)
+}
+
+/**
+ * Compiles `this` [String] as a [XPathExpression]`<F>`.
+ */
+@Suppress("UNCHECKED_CAST")
+public fun <F> String.compile(): XPathExpression<F> =
+    XPathFactory.instance().compile(this) as XPathExpression<F>
