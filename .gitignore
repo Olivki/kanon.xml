@@ -100,3 +100,4 @@ fabric.properties
 
 /src/test/kotlin/Test.kt
 /src/test/java/JavaTest.java
+!/appender.jar
