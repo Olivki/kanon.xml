@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import com.jfrog.bintray.gradle.BintrayExtension
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -111,7 +110,7 @@ bintray {
     setPublications("mavenPublication")
     
     // Details for the actual package that's going up on BinTray.
-    pkg(delegateClosureOf<BintrayExtension.PackageConfig> {
+    with(pkg) {
         repo = "kanon"
         desc = project.description
         name = artifactName
@@ -121,12 +120,12 @@ bintray {
         setLicenses("Apache-2.0")
         setLabels("kotlin")
         
-        version(delegateClosureOf<BintrayExtension.VersionConfig> {
+        with(version) {
             name = project.version.toString()
             desc = project.version.toString()
             released = `java.util`.Date().toString()
-        })
-    })
+        }
+    }
 }
 
 // Maven Tasks
