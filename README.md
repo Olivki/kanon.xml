@@ -8,6 +8,8 @@ To accomplish this it provides two differenet DSLs, one for building documents, 
 
 kanon.xml uses [JDOM2](http://www.jdom.org/) as the underlying XML engine for building and traversing documents.
 
+Version 3.0 of kanon.xml is a complete rewrite from the previous major versions, and thus code that was made using the old system may not work, while the builder DSL is mainly the same, sans some missing functions to reduce clutter, the traveler *(or `parser` as it was called up until v3.0)* has been completely remade to make it a nicer experience.
+
 ## Usage
 
 *(This section is currently very bare-bones, a more thorough guide will be written later)*
