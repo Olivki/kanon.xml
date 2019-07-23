@@ -22,7 +22,7 @@ apply(plugin = "name.remal.maven-publish-bintray")
 
 project.group = "moe.kanon.xml"
 project.description = "A DSL made in Kotlin for parsing and generating XML."
-project.version = "3.0.0"
+project.version = "3.0.1"
 val gitUrl = "https://gitlab.com/Olivki/kanon-xml"
 
 // General Tasks
@@ -78,6 +78,6 @@ project.afterEvaluate {
     publishing.repositories.convention[RepositoryHandlerBintrayExtension::class.java].bintray {
         owner = "olivki"
         repositoryName = "kanon"
-        packageName = "kanon.events"
+        packageName = "kanon.xml"
     }
 }

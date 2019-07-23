@@ -247,7 +247,7 @@ import java.nio.file.StandardOpenOption
     val detachedSource: Element get() = source.detach()
 
     init {
-        parent.addContent(source)
+        if (source != parent) parent.addContent(source)
     }
 
     // -- MISC -- \\
