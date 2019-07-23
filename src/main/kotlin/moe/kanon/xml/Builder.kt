@@ -107,7 +107,7 @@ import java.nio.file.StandardOpenOption
     @BuilderMarker inline fun attribute(
         key: String,
         type: AttributeType = AttributeType.UNDECLARED,
-        nameSpace: Namespace = Namespace.NO_NAMESPACE,
+        nameSpace: Namespace = root.namespace,
         value: () -> Any
     ): Attribute = root.setAttribute(Attribute(key, value().toString(), type, nameSpace)).getAttribute(key)
 
@@ -130,7 +130,7 @@ import java.nio.file.StandardOpenOption
      */
     @BuilderMarker inline fun element(
         tagName: String,
-        namespace: Namespace = Namespace.NO_NAMESPACE,
+        namespace: Namespace = root.namespace,
         scope: ElementBuilder.() -> Unit = {}
     ): ElementBuilder = ElementBuilder(root, Element(tagName, namespace)).apply(scope)
 
@@ -149,7 +149,7 @@ import java.nio.file.StandardOpenOption
      */
     @BuilderMarker inline fun textElement(
         tagName: String,
-        namespace: Namespace = Namespace.NO_NAMESPACE,
+        namespace: Namespace = root.namespace,
         text: () -> Any
     ) {
         addContent(Element(tagName, namespace).setText(text().toString()))
@@ -172,7 +172,7 @@ import java.nio.file.StandardOpenOption
      */
     @BuilderMarker inline fun cdataElement(
         tagName: String,
-        namespace: Namespace = Namespace.NO_NAMESPACE,
+        namespace: Namespace = root.namespace,
         contents: () -> Any
     ) {
         addContent(Element(tagName, namespace).setContent(CDATA(contents().toString())))
@@ -269,7 +269,7 @@ import java.nio.file.StandardOpenOption
     @BuilderMarker inline fun attribute(
         key: String,
         type: AttributeType = AttributeType.UNDECLARED,
-        nameSpace: Namespace = Namespace.NO_NAMESPACE,
+        nameSpace: Namespace = parent.namespace,
         value: () -> Any
     ): Attribute = source.setAttribute(Attribute(key, value().toString(), type, nameSpace)).getAttribute(key)
 
@@ -292,7 +292,7 @@ import java.nio.file.StandardOpenOption
      */
     @BuilderMarker inline fun element(
         tagName: String,
-        namespace: Namespace = Namespace.NO_NAMESPACE,
+        namespace: Namespace = parent.namespace,
         scope: ElementBuilder.() -> Unit = {}
     ): ElementBuilder = ElementBuilder(source, Element(tagName, namespace)).apply(scope)
 
@@ -311,7 +311,7 @@ import java.nio.file.StandardOpenOption
      */
     @BuilderMarker inline fun textElement(
         tagName: String,
-        namespace: Namespace = Namespace.NO_NAMESPACE,
+        namespace: Namespace = parent.namespace,
         text: () -> Any
     ) {
         source.addContent(Element(tagName, namespace).setText(text().toString()))
@@ -334,7 +334,7 @@ import java.nio.file.StandardOpenOption
      */
     @BuilderMarker inline fun cdataElement(
         tagName: String,
-        namespace: Namespace = Namespace.NO_NAMESPACE,
+        namespace: Namespace = parent.namespace,
         contents: () -> Any
     ) {
         addContent(Element(tagName, namespace).setContent(CDATA(contents().toString())))
@@ -398,7 +398,7 @@ import java.nio.file.StandardOpenOption
     @BuilderMarker inline fun attribute(
         key: String,
         type: AttributeType = AttributeType.UNDECLARED,
-        namespace: Namespace = Namespace.NO_NAMESPACE,
+        namespace: Namespace = source.namespace,
         value: () -> Any
     ): Attribute = source.setAttribute(Attribute(key, value().toString(), type, namespace)).getAttribute(key)
 
@@ -409,7 +409,7 @@ import java.nio.file.StandardOpenOption
      * is determined by invoking [toString][Any.toString] on the result of the given [value] function.
      */
     @BuilderMarker inline operator fun String.invoke(value: () -> Any): Attribute =
-        source.setAttribute(this, value().toString()).getAttribute(this)
+        source.setAttribute(this, value().toString(), source.namespace).getAttribute(this)
 
     @BuilderMarker override fun toString(): String =
         "${source.name}(${source.attributes.joinToString { "[${it.name}:${it.value}]" }})"
