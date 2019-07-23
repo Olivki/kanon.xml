@@ -107,7 +107,7 @@ import java.nio.file.StandardOpenOption
     @BuilderMarker inline fun attribute(
         key: String,
         type: AttributeType = AttributeType.UNDECLARED,
-        nameSpace: Namespace = root.namespace,
+        nameSpace: Namespace = Namespace.NO_NAMESPACE,
         value: () -> Any
     ): Attribute = root.setAttribute(Attribute(key, value().toString(), type, nameSpace)).getAttribute(key)
 
@@ -269,7 +269,7 @@ import java.nio.file.StandardOpenOption
     @BuilderMarker inline fun attribute(
         key: String,
         type: AttributeType = AttributeType.UNDECLARED,
-        nameSpace: Namespace = parent.namespace,
+        nameSpace: Namespace = Namespace.NO_NAMESPACE,
         value: () -> Any
     ): Attribute = source.setAttribute(Attribute(key, value().toString(), type, nameSpace)).getAttribute(key)
 
