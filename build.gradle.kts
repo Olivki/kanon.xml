@@ -22,7 +22,7 @@ apply(plugin = "name.remal.maven-publish-bintray")
 
 project.group = "moe.kanon.xml"
 project.description = "A DSL made in Kotlin for parsing and generating XML."
-project.version = "3.1.0"
+project.version = "3.1.1"
 val gitUrl = "https://gitlab.com/Olivki/kanon-xml"
 
 // General Tasks

@@ -398,7 +398,7 @@ import java.nio.file.StandardOpenOption
     @BuilderMarker inline fun attribute(
         key: String,
         type: AttributeType = AttributeType.UNDECLARED,
-        namespace: Namespace = source.namespace,
+        namespace: Namespace = Namespace.NO_NAMESPACE,
         value: () -> Any
     ): Attribute = source.setAttribute(Attribute(key, value().toString(), type, namespace)).getAttribute(key)
 
@@ -409,7 +409,7 @@ import java.nio.file.StandardOpenOption
      * is determined by invoking [toString][Any.toString] on the result of the given [value] function.
      */
     @BuilderMarker inline operator fun String.invoke(value: () -> Any): Attribute =
-        source.setAttribute(this, value().toString(), source.namespace).getAttribute(this)
+        source.setAttribute(this, value().toString()).getAttribute(this)
 
     @BuilderMarker override fun toString(): String =
         "${source.name}(${source.attributes.joinToString { "[${it.name}:${it.value}]" }})"
