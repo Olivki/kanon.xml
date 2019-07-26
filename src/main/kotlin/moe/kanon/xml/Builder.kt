@@ -203,12 +203,10 @@ import java.nio.file.StandardOpenOption
      */
     fun saveTo(directory: Path, fileName: String): Path {
         val file = directory.resolve(fileName)
-        val writer = XMLOutputter(outputFormat)
 
-        writer.output(
-            document,
-            Files.newOutputStream(file, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-        )
+        Files.newOutputStream(file, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use {
+            XMLOutputter(outputFormat).output(document, it)
+        }
 
         return file
     }
